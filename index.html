@@ -1,0 +1,1766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NotebookLM — Intelligence Brief</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Bricolage+Grotesque:opsz,wght@12..96,300;12..96,400;12..96,500;12..96,700&family=JetBrains+Mono:wght@300;400;500&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ══════════════════════════════════════════
+   ROOT TOKENS
+══════════════════════════════════════════ */
+:root{
+  --bg:#050609;--s1:#0a0c14;--s2:#0f1219;--s3:#141720;
+  --bdr:rgba(255,255,255,0.045);--bdr2:rgba(99,210,150,0.2);--bdr3:rgba(99,210,150,0.45);
+  --text:#eceae4;--muted:rgba(236,234,228,0.52);--faint:rgba(236,234,228,0.18);--ghost:rgba(236,234,228,0.08);
+  --g:#63d296;--g2:#4fbf84;--amber:#e4b84a;--red:#e07272;--blue:#6aaddc;--purple:#a78bfa;
+  --font-d:'Bebas Neue',sans-serif;
+  --font-b:'Bricolage Grotesque',sans-serif;
+  --font-m:'JetBrains Mono',monospace;
+  --font-t:'Rajdhani',sans-serif;
+  --r:13px;
+  --glow-g:0 0 28px rgba(99,210,150,0.14),0 0 56px rgba(99,210,150,0.06);
+  --glow-a:0 0 28px rgba(228,184,74,0.14),0 0 56px rgba(228,184,74,0.06);
+  --glow-r:0 0 28px rgba(224,114,114,0.14);
+  --script-w:340px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;overflow:hidden;font-family:var(--font-b);background:var(--bg);color:var(--text);}
+
+/* ══════════════════════════════════════════
+   ATMOSPHERIC LAYERS
+══════════════════════════════════════════ */
+#bgCanvas{position:fixed;inset:0;z-index:0;pointer-events:none;}
+
+.bg-grid{
+  position:fixed;inset:0;z-index:1;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(99,210,150,0.022) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(99,210,150,0.022) 1px,transparent 1px);
+  background-size:55px 55px;
+  mask-image:radial-gradient(ellipse 75% 75% at 50% 50%,black 20%,transparent 100%);
+}
+
+/* Animated diagonal lines */
+.bg-diag{
+  position:fixed;inset:0;z-index:1;pointer-events:none;overflow:hidden;
+  opacity:0.015;
+  background:repeating-linear-gradient(
+    -45deg,
+    var(--g) 0px,var(--g) 1px,
+    transparent 1px,transparent 40px
+  );
+  animation:diag-drift 30s linear infinite;
+}
+@keyframes diag-drift{from{background-position:0 0;}to{background-position:80px 80px;}}
+
+.bg-scan{position:fixed;inset:0;z-index:1;pointer-events:none;overflow:hidden;}
+.bg-scan::after{
+  content:'';position:absolute;left:0;right:0;height:3px;top:-3px;
+  background:linear-gradient(90deg,transparent 0%,rgba(99,210,150,0.04) 20%,rgba(99,210,150,0.12) 50%,rgba(99,210,150,0.04) 80%,transparent 100%);
+  animation:scanline 10s linear infinite;
+  filter:blur(1px);
+}
+@keyframes scanline{to{top:100vh;}}
+
+.bg-vignette{
+  position:fixed;inset:0;z-index:1;pointer-events:none;
+  background:radial-gradient(ellipse 100% 100% at 50% 50%,transparent 40%,rgba(5,6,9,0.7) 100%);
+}
+
+.bg-noise{
+  position:fixed;inset:0;z-index:1;pointer-events:none;opacity:0.5;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='250' height='250'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='250' height='250' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+}
+
+/* HUD corners — more elaborate */
+.hud-corner{position:fixed;z-index:3;pointer-events:none;}
+.hud-corner.tl{top:54px;left:0;width:200px;height:200px;}
+.hud-corner.tr{top:54px;right:0;width:160px;height:100px;}
+.hud-corner.bl{bottom:50px;left:0;width:160px;height:120px;}
+.hud-corner.br{bottom:50px;right:0;width:200px;height:160px;}
+.hud-corner svg{width:100%;height:100%;}
+
+/* Floating orbs */
+.orb{position:fixed;border-radius:50%;pointer-events:none;z-index:0;filter:blur(80px);}
+.orb-1{width:500px;height:500px;background:radial-gradient(circle,rgba(99,210,150,0.055),transparent 70%);top:-100px;right:-50px;animation:orb-drift1 18s ease-in-out infinite alternate;}
+.orb-2{width:400px;height:400px;background:radial-gradient(circle,rgba(228,184,74,0.04),transparent 70%);bottom:-80px;left:-60px;animation:orb-drift2 22s ease-in-out infinite alternate;}
+.orb-3{width:300px;height:300px;background:radial-gradient(circle,rgba(106,173,220,0.035),transparent 70%);top:40%;left:40%;animation:orb-drift3 15s ease-in-out infinite alternate;}
+@keyframes orb-drift1{from{transform:translate(0,0) scale(1);}to{transform:translate(-60px,40px) scale(1.15);}}
+@keyframes orb-drift2{from{transform:translate(0,0) scale(1);}to{transform:translate(40px,-50px) scale(1.2);}}
+@keyframes orb-drift3{from{transform:translate(0,0);}to{transform:translate(-30px,20px);}}
+
+/* ══════════════════════════════════════════
+   LAYOUT SHELL
+══════════════════════════════════════════ */
+.shell{position:relative;z-index:2;display:flex;flex-direction:column;height:100vh;}
+.main-row{flex:1;display:flex;overflow:hidden;position:relative;}
+
+/* ══════════════════════════════════════════
+   TOPBAR
+══════════════════════════════════════════ */
+.topbar{
+  flex-shrink:0;height:50px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 28px;
+  background:rgba(5,6,9,0.94);
+  backdrop-filter:blur(30px);
+  border-bottom:1px solid var(--bdr);
+  position:relative;z-index:10;
+}
+.topbar::after{
+  content:'';position:absolute;bottom:-1px;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent 0%,var(--g) 30%,var(--amber) 70%,transparent 100%);
+  opacity:0.25;
+}
+.tb-logo{display:flex;align-items:center;gap:9px;}
+.tb-logo-mark{
+  width:26px;height:26px;border-radius:5px;
+  border:1.5px solid rgba(99,210,150,0.35);
+  display:grid;place-items:center;
+  position:relative;overflow:hidden;
+  background:linear-gradient(135deg,rgba(99,210,150,0.1),transparent);
+}
+.tb-logo-mark span{font-family:var(--font-m);font-size:0.6rem;color:var(--g);position:relative;z-index:1;}
+.tb-logo-text{font-family:var(--font-d);font-size:1.1rem;letter-spacing:0.15em;
+  background:linear-gradient(135deg,var(--g) 0%,var(--amber) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.tb-logo-sub{font-family:var(--font-m);font-size:0.44rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--faint);margin-top:-2px;}
+
+.tb-center{display:flex;align-items:center;gap:5px;}
+.nd{
+  width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,0.08);
+  border:none;cursor:pointer;transition:all 0.3s;position:relative;
+}
+.nd::after{
+  content:attr(data-label);position:absolute;top:calc(100%+10px);left:50%;transform:translateX(-50%);
+  font-family:var(--font-m);font-size:0.5rem;letter-spacing:0.08em;color:var(--g);white-space:nowrap;
+  opacity:0;pointer-events:none;transition:opacity 0.2s;
+  background:rgba(5,6,9,0.97);padding:4px 10px;border-radius:4px;border:1px solid var(--bdr2);
+}
+.nd:hover::after{opacity:1;}
+.nd.active{background:var(--g);width:18px;border-radius:2px;box-shadow:0 0 8px rgba(99,210,150,0.7),0 0 16px rgba(99,210,150,0.25);}
+.nd:hover:not(.active){background:rgba(255,255,255,0.28);transform:scale(1.5);}
+
+.tb-right{display:flex;align-items:center;gap:12px;}
+.waveform{display:flex;align-items:center;gap:2px;height:16px;}
+.wave-bar{width:2px;border-radius:1px;background:var(--g);opacity:0.55;animation:wave 1.3s ease-in-out infinite;}
+.wave-bar:nth-child(1){height:4px;animation-delay:0s;}
+.wave-bar:nth-child(2){height:9px;animation-delay:.1s;}
+.wave-bar:nth-child(3){height:14px;animation-delay:.2s;}
+.wave-bar:nth-child(4){height:10px;animation-delay:.3s;}
+.wave-bar:nth-child(5){height:6px;animation-delay:.4s;}
+.wave-bar:nth-child(6){height:12px;animation-delay:.5s;}
+.wave-bar:nth-child(7){height:7px;animation-delay:.6s;}
+@keyframes wave{0%,100%{transform:scaleY(0.45);}50%{transform:scaleY(1);}}
+
+.live-badge{
+  display:flex;align-items:center;gap:5px;padding:3px 11px;
+  border:1px solid rgba(99,210,150,0.18);background:rgba(99,210,150,0.05);
+  font-family:var(--font-m);font-size:0.5rem;letter-spacing:0.15em;color:var(--g);
+  clip-path:polygon(5px 0%,100% 0%,calc(100% - 5px) 100%,0% 100%);
+}
+.lpulse{width:4px;height:4px;border-radius:50%;background:var(--g);animation:lpulse 2s infinite;}
+@keyframes lpulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(99,210,150,0.6);}50%{opacity:.4;box-shadow:0 0 0 5px rgba(99,210,150,0);}}
+
+.sys-item{display:flex;align-items:center;gap:4px;font-family:var(--font-m);font-size:0.46rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--faint);}
+.sys-dot{width:4px;height:4px;border-radius:50%;background:var(--g);box-shadow:0 0 5px rgba(99,210,150,0.8);animation:sys-pulse 2.5s infinite;}
+@keyframes sys-pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
+.slide-counter{font-family:var(--font-m);font-size:0.55rem;letter-spacing:0.12em;color:var(--faint);}
+.slide-counter span{color:var(--g);}
+
+/* Script toggle button */
+.script-toggle{
+  display:flex;align-items:center;gap:5px;padding:4px 12px;
+  border:1px solid rgba(167,139,250,0.25);background:rgba(167,139,250,0.06);
+  font-family:var(--font-t);font-size:0.62rem;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;
+  color:var(--purple);cursor:pointer;border-radius:3px;transition:all 0.2s;
+}
+.script-toggle:hover{background:rgba(167,139,250,0.12);border-color:rgba(167,139,250,0.4);}
+.script-toggle.active{background:rgba(167,139,250,0.14);border-color:rgba(167,139,250,0.4);color:#c4b5fd;}
+
+/* PROGRESS */
+.prog-bar{flex-shrink:0;height:2px;background:rgba(255,255,255,0.025);position:relative;z-index:10;}
+.prog-fill{
+  height:100%;width:11.11%;
+  background:linear-gradient(90deg,var(--g),var(--amber));
+  transition:width 0.6s cubic-bezier(0.4,0,0.2,1);
+  position:relative;
+}
+.prog-fill::after{
+  content:'';position:absolute;right:-1px;top:-3px;
+  width:3px;height:8px;background:var(--amber);border-radius:1px;
+  box-shadow:0 0 8px rgba(228,184,74,0.9);
+}
+
+/* ══════════════════════════════════════════
+   SLIDES AREA
+══════════════════════════════════════════ */
+.slides-area{
+  flex:1;overflow:hidden;position:relative;
+  transition:width 0.35s cubic-bezier(0.4,0,0.2,1);
+}
+.slide{
+  display:none;height:100%;overflow-y:auto;overflow-x:hidden;
+  padding:28px 48px 44px;flex-direction:column;scroll-behavior:smooth;
+}
+.slide::-webkit-scrollbar{width:3px;}
+.slide::-webkit-scrollbar-thumb{background:rgba(99,210,150,0.12);border-radius:2px;}
+.slide.active{display:flex;animation:sIn 0.5s cubic-bezier(0.16,1,0.3,1);}
+@keyframes sIn{from{opacity:0;transform:translateY(18px) scale(0.99);}to{opacity:1;transform:none;}}
+
+/* ══════════════════════════════════════════
+   SPEAKER SCRIPT PANEL
+══════════════════════════════════════════ */
+.script-panel{
+  width:0;flex-shrink:0;
+  background:rgba(8,9,15,0.97);
+  border-left:1px solid rgba(167,139,250,0.12);
+  overflow:hidden;
+  transition:width 0.35s cubic-bezier(0.4,0,0.2,1);
+  display:flex;flex-direction:column;
+  position:relative;
+}
+.script-panel.open{width:var(--script-w);}
+.script-panel::before{
+  content:'';position:absolute;top:0;left:0;bottom:0;width:1px;
+  background:linear-gradient(to bottom,transparent,rgba(167,139,250,0.3),rgba(167,139,250,0.3),transparent);
+}
+
+.sp-header{
+  flex-shrink:0;padding:14px 16px 10px;
+  border-bottom:1px solid rgba(167,139,250,0.1);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.sp-title{font-family:var(--font-t);font-size:0.68rem;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:var(--purple);}
+.sp-badge{font-family:var(--font-m);font-size:0.46rem;letter-spacing:0.14em;text-transform:uppercase;color:rgba(167,139,250,0.5);padding:2px 7px;border:1px solid rgba(167,139,250,0.15);border-radius:2px;}
+
+.sp-slide-name{
+  flex-shrink:0;padding:8px 16px;
+  border-bottom:1px solid rgba(167,139,250,0.08);
+  font-family:var(--font-m);font-size:0.52rem;letter-spacing:0.12em;text-transform:uppercase;
+  color:rgba(167,139,250,0.5);
+  display:flex;align-items:center;gap:6px;
+}
+.sp-slide-num{
+  background:rgba(167,139,250,0.12);border:1px solid rgba(167,139,250,0.2);
+  padding:1px 6px;border-radius:2px;color:var(--purple);font-size:0.5rem;
+}
+
+.sp-body{flex:1;overflow-y:auto;padding:14px 16px;}
+.sp-body::-webkit-scrollbar{width:2px;}
+.sp-body::-webkit-scrollbar-thumb{background:rgba(167,139,250,0.2);}
+
+.sp-section{margin-bottom:16px;}
+.sp-section-lbl{
+  font-family:var(--font-m);font-size:0.48rem;letter-spacing:0.18em;text-transform:uppercase;
+  color:var(--purple);opacity:0.6;margin-bottom:6px;
+  display:flex;align-items:center;gap:6px;
+}
+.sp-section-lbl::after{content:'';flex:1;height:1px;background:rgba(167,139,250,0.1);}
+
+.sp-line{
+  font-size:0.72rem;color:var(--muted);line-height:1.72;
+  border-left:2px solid rgba(167,139,250,0.15);
+  padding:6px 10px;margin-bottom:5px;border-radius:0 4px 4px 0;
+  background:rgba(167,139,250,0.02);
+  position:relative;
+}
+.sp-line strong{color:var(--text);}
+.sp-line em{color:var(--g);font-style:normal;}
+.sp-line.key{border-left-color:var(--amber);background:rgba(228,184,74,0.03);}
+.sp-line.key::before{
+  content:'KEY';position:absolute;right:8px;top:6px;
+  font-family:var(--font-m);font-size:0.4rem;letter-spacing:0.15em;color:rgba(228,184,74,0.5);
+}
+.sp-cue{
+  display:flex;align-items:flex-start;gap:7px;
+  padding:5px 8px;background:rgba(99,210,150,0.04);
+  border:1px solid rgba(99,210,150,0.1);border-radius:5px;margin-bottom:5px;
+  font-size:0.65rem;color:var(--faint);line-height:1.55;
+}
+.sp-cue-arrow{color:var(--g);flex-shrink:0;font-size:0.6rem;margin-top:1px;}
+.sp-objection{
+  padding:8px 10px;background:rgba(228,184,74,0.04);
+  border:1px solid rgba(228,184,74,0.1);border-radius:6px;margin-bottom:6px;
+}
+.sp-obj-q{font-family:var(--font-t);font-size:0.64rem;font-weight:600;color:var(--amber);margin-bottom:3px;letter-spacing:0.04em;}
+.sp-obj-a{font-size:0.64rem;color:var(--muted);line-height:1.55;}
+.sp-timer{
+  display:flex;align-items:center;gap:6px;
+  font-family:var(--font-m);font-size:0.5rem;letter-spacing:0.1em;
+  color:rgba(167,139,250,0.5);padding:6px 0;
+  border-top:1px solid rgba(167,139,250,0.08);margin-top:10px;
+}
+.sp-timer-dot{width:4px;height:4px;border-radius:50%;background:var(--purple);animation:sys-pulse 2s infinite;}
+
+.sp-footer{
+  flex-shrink:0;padding:10px 16px;
+  border-top:1px solid rgba(167,139,250,0.1);
+  font-family:var(--font-m);font-size:0.48rem;letter-spacing:0.1em;
+  color:rgba(167,139,250,0.35);
+  display:flex;align-items:center;gap:6px;
+}
+
+/* ══════════════════════════════════════════
+   BOTTOM BAR
+══════════════════════════════════════════ */
+.bottombar{
+  flex-shrink:0;height:46px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 28px;
+  background:rgba(5,6,9,0.94);backdrop-filter:blur(30px);
+  border-top:1px solid var(--bdr);position:relative;z-index:10;
+}
+.bottombar::before{
+  content:'';position:absolute;top:-1px;left:5%;right:5%;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(99,210,150,0.18),transparent);
+}
+.bb-info{font-family:var(--font-m);font-size:0.5rem;color:var(--faint);letter-spacing:0.1em;text-transform:uppercase;}
+.bb-btns{display:flex;gap:5px;}
+.bb-btn{
+  padding:5px 14px;border:1px solid var(--bdr);border-radius:3px;
+  background:none;color:var(--muted);
+  font-family:var(--font-t);font-size:0.7rem;font-weight:600;
+  cursor:pointer;transition:all 0.2s;letter-spacing:0.1em;text-transform:uppercase;
+  clip-path:polygon(4px 0%,100% 0%,calc(100% - 4px) 100%,0% 100%);
+}
+.bb-btn:hover{border-color:var(--bdr2);color:var(--g);background:rgba(99,210,150,0.05);box-shadow:var(--glow-g);}
+
+/* ══════════════════════════════════════════
+   TYPOGRAPHY SYSTEM
+══════════════════════════════════════════ */
+.tag{
+  display:inline-flex;align-items:center;gap:7px;
+  font-family:var(--font-m);font-size:0.54rem;letter-spacing:0.22em;text-transform:uppercase;color:var(--g);margin-bottom:9px;
+}
+.tag::before{content:'';display:inline-block;width:22px;height:1px;background:linear-gradient(90deg,var(--g),transparent);}
+.tag-dot{width:5px;height:5px;border-radius:50%;border:1px solid var(--g);display:inline-block;margin-left:1px;animation:sys-pulse 3s infinite;}
+
+.h-display{
+  font-family:var(--font-d);
+  font-size:clamp(2.4rem,4.2vw,4.6rem);
+  letter-spacing:0.05em;line-height:0.9;color:var(--text);margin-bottom:11px;
+}
+.h-display em{font-style:normal;background:linear-gradient(135deg,var(--g) 0%,var(--amber) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.h-display .ghost-text{color:rgba(236,234,228,0.12);}
+.sub{font-size:0.86rem;font-weight:400;line-height:1.76;color:var(--muted);max-width:580px;margin-bottom:22px;}
+
+/* ══════════════════════════════════════════
+   SLIDE 1 — HERO
+══════════════════════════════════════════ */
+.hero-grid{display:grid;grid-template-columns:1.1fr 1fr;gap:36px;flex:1;align-items:center;}
+.hero-eyebrow{display:flex;align-items:center;gap:9px;margin-bottom:18px;}
+.eyebrow-pill{
+  font-family:var(--font-t);font-size:0.58rem;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;
+  color:var(--amber);padding:3px 11px;
+  border:1px solid rgba(228,184,74,0.2);border-radius:2px;background:rgba(228,184,74,0.05);
+  clip-path:polygon(4px 0%,100% 0%,calc(100% - 4px) 100%,0% 100%);
+}
+.eyebrow-date{font-family:var(--font-m);font-size:0.5rem;color:var(--faint);letter-spacing:0.12em;}
+.hero-h{
+  font-family:var(--font-d);
+  font-size:clamp(3rem,5.5vw,5.8rem);
+  letter-spacing:0.05em;line-height:0.87;color:var(--text);margin-bottom:18px;
+}
+.hero-h em{font-style:normal;background:linear-gradient(135deg,var(--g) 0%,var(--amber) 80%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.hero-h .ghost-text{color:rgba(236,234,228,0.1);}
+.hero-desc{font-size:0.88rem;line-height:1.78;color:var(--muted);max-width:430px;margin-bottom:18px;}
+.hero-note{
+  padding:12px 16px;
+  border:1px solid rgba(228,184,74,0.16);border-left:2px solid var(--amber);
+  border-radius:6px;background:rgba(228,184,74,0.035);max-width:430px;
+  position:relative;overflow:hidden;
+}
+.hero-note::after{content:'';position:absolute;top:0;right:0;width:50px;height:50px;background:radial-gradient(circle,rgba(228,184,74,0.07),transparent);}
+.hn-lbl{font-family:var(--font-m);font-size:0.46rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--amber);margin-bottom:4px;}
+.hn-txt{font-size:0.75rem;color:var(--muted);line-height:1.65;}
+.hero-right{display:flex;flex-direction:column;gap:9px;}
+.metric-card{
+  padding:15px 20px;background:var(--s1);border:1px solid var(--bdr);border-radius:var(--r);
+  transition:all 0.4s cubic-bezier(0.4,0,0.2,1);position:relative;overflow:hidden;
+  opacity:0;transform:translateX(28px);
+}
+.metric-card.visible{opacity:1;transform:translateX(0);}
+.metric-card::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 0% 50%,rgba(99,210,150,0.04),transparent 65%);opacity:0;transition:opacity 0.3s;}
+.metric-card::after{content:'';position:absolute;left:0;top:10px;bottom:10px;width:2px;background:linear-gradient(to bottom,transparent,var(--g),transparent);transform:scaleY(0);transform-origin:center;transition:transform 0.4s;}
+.metric-card:hover{border-color:var(--bdr2);transform:translateX(6px)!important;box-shadow:var(--glow-g);}
+.metric-card:hover::before{opacity:1;}
+.metric-card:hover::after{transform:scaleY(1);}
+.mc-num{font-family:var(--font-d);font-size:2.4rem;letter-spacing:0.04em;line-height:1;background:linear-gradient(135deg,var(--g),var(--amber));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:2px;}
+.mc-lbl{font-family:var(--font-m);font-size:0.5rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);}
+.mc-desc{font-size:0.68rem;color:var(--faint);margin-top:2px;}
+
+/* ══════════════════════════════════════════
+   SLIDE 2 — AI MOMENT
+══════════════════════════════════════════ */
+.ai-moment-grid{display:grid;grid-template-columns:1.4fr 1fr;gap:24px;flex:1;align-items:start;margin-top:14px;}
+.curve-wrap{
+  position:relative;background:var(--s1);border:1px solid var(--bdr);border-radius:var(--r);
+  padding:18px;overflow:hidden;
+}
+.curve-wrap::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 25% 50%,rgba(99,210,150,0.04),transparent 70%);}
+.curve-label{position:absolute;top:12px;right:14px;font-family:var(--font-m);font-size:0.44rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--faint);}
+#adoptionCanvas{width:100%;display:block;}
+.curve-legend{display:flex;gap:12px;margin-top:10px;flex-wrap:wrap;}
+.cl-item{display:flex;align-items:center;gap:5px;font-family:var(--font-m);font-size:0.5rem;letter-spacing:0.07em;color:var(--muted);}
+.cl-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.window-banner{
+  margin-top:9px;padding:11px 14px;border-radius:var(--r);
+  background:linear-gradient(135deg,rgba(99,210,150,0.06),rgba(228,184,74,0.04));
+  border:1px solid rgba(99,210,150,0.16);
+  display:flex;align-items:flex-start;gap:9px;position:relative;overflow:hidden;
+}
+.window-banner::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,var(--g),var(--amber),transparent);}
+.wb-pulse{width:7px;height:7px;border-radius:50%;background:var(--g);animation:lpulse 1.5s infinite;flex-shrink:0;margin-top:3px;}
+.wb-text{font-size:0.74rem;color:var(--text);line-height:1.55;}
+.wb-text strong{color:var(--g);}
+.moment-stats{display:flex;flex-direction:column;gap:7px;}
+.mstat{
+  padding:14px 16px;background:var(--s1);border:1px solid var(--bdr);border-radius:var(--r);
+  transition:all 0.3s;opacity:0;transform:translateY(14px);position:relative;overflow:hidden;
+}
+.mstat.visible{opacity:1;transform:translateY(0);}
+.mstat:hover{border-color:var(--bdr2);}
+.mstat::after{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,var(--g),transparent);transform:scaleX(0);transform-origin:left;transition:transform 0.4s;}
+.mstat:hover::after{transform:scaleX(1);}
+.mstat-num{font-family:var(--font-d);font-size:2rem;letter-spacing:0.04em;line-height:1;margin-bottom:2px;}
+.mstat-num.green{background:linear-gradient(135deg,var(--g),var(--amber));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.mstat-num.amber{color:var(--amber);}
+.mstat-num.red{color:var(--red);}
+.mstat-label{font-family:var(--font-t);font-size:0.55rem;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);margin-bottom:2px;}
+.mstat-desc{font-size:0.68rem;color:var(--faint);line-height:1.5;}
+
+/* ══════════════════════════════════════════
+   SLIDE 3 — DAY IN LIFE
+══════════════════════════════════════════ */
+.day-toggle-row{display:flex;gap:0;margin-bottom:14px;border:1px solid var(--bdr);border-radius:6px;overflow:hidden;width:fit-content;}
+.day-toggle-btn{
+  padding:8px 24px;background:none;border:none;
+  font-family:var(--font-t);font-size:0.62rem;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;
+  color:var(--muted);cursor:pointer;transition:all 0.25s;
+}
+.day-toggle-btn.active-bad{background:rgba(224,114,114,0.09);color:var(--red);border-right:1px solid var(--bdr);}
+.day-toggle-btn.active-good{background:rgba(99,210,150,0.09);color:var(--g);}
+.day-toggle-btn:not(.active-bad):not(.active-good):hover{background:rgba(255,255,255,0.03);}
+.day-view{display:none;}
+.day-view.active{display:block;}
+.day-header-row{display:grid;grid-template-columns:80px repeat(8,1fr);gap:2px;margin-bottom:3px;}
+.dhr-lbl{font-family:var(--font-m);font-size:0.48rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--faint);text-align:center;}
+.day-person{display:grid;grid-template-columns:80px repeat(8,1fr);gap:2px;margin-bottom:4px;align-items:center;}
+.dp-name{font-family:var(--font-t);font-size:0.56rem;font-weight:600;letter-spacing:0.1em;color:var(--muted);text-align:right;padding-right:10px;text-transform:uppercase;}
+.dp-block{
+  height:32px;border-radius:3px;
+  display:flex;align-items:center;justify-content:center;
+  position:relative;cursor:default;transition:all 0.25s;overflow:hidden;
+}
+.dp-block::after{content:'';position:absolute;inset:0;background:rgba(255,255,255,0);transition:background 0.2s;}
+.dp-block:hover::after{background:rgba(255,255,255,0.04);}
+.dp-block:hover{transform:scaleY(1.08);z-index:2;}
+.dp-block-label{font-size:0.48rem;font-family:var(--font-m);letter-spacing:0.04em;text-align:center;line-height:1.2;padding:0 3px;position:relative;z-index:1;}
+.dp-block.search{background:rgba(224,114,114,0.13);border:1px solid rgba(224,114,114,0.22);color:var(--red);}
+.dp-block.work{background:rgba(99,210,150,0.11);border:1px solid rgba(99,210,150,0.2);color:var(--g);}
+.dp-block.meeting{background:rgba(106,173,220,0.11);border:1px solid rgba(106,173,220,0.2);color:var(--blue);}
+.dp-block.idle{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);color:var(--faint);}
+.dp-block.nb{background:rgba(99,210,150,0.18);border:1px solid rgba(99,210,150,0.35);color:var(--g);box-shadow:inset 0 0 10px rgba(99,210,150,0.08);}
+.dp-block.span2{grid-column:span 2;}.dp-block.span3{grid-column:span 3;}.dp-block.span4{grid-column:span 4;}
+.day-summary-row{display:flex;gap:7px;margin-top:10px;}
+.dsumm{
+  flex:1;padding:10px 14px;background:var(--s1);border:1px solid var(--bdr);border-radius:6px;
+  text-align:center;transition:all 0.3s;
+}
+.dsumm:hover{border-color:var(--bdr2);}
+.dsumm-num{font-family:var(--font-d);font-size:1.7rem;letter-spacing:0.04em;line-height:1;margin-bottom:2px;}
+.dsumm-lbl{font-family:var(--font-m);font-size:0.48rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);}
+
+/* ══════════════════════════════════════════
+   SLIDE 4 — FEATURES
+══════════════════════════════════════════ */
+.features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;margin-top:18px;}
+.feat-card{
+  background:var(--s1);border:1px solid var(--bdr);border-radius:var(--r);
+  padding:22px 18px;cursor:pointer;
+  transition:all 0.4s cubic-bezier(0.4,0,0.2,1);
+  position:relative;overflow:hidden;user-select:none;
+}
+/* Animated border glow effect */
+.feat-card::before{
+  content:'';position:absolute;inset:-1px;border-radius:var(--r);
+  background:linear-gradient(135deg,rgba(99,210,150,0.3),rgba(228,184,74,0.15),transparent,rgba(99,210,150,0.15));
+  opacity:0;transition:opacity 0.4s;z-index:0;
+}
+.feat-card::after{
+  content:'';position:absolute;inset:1px;border-radius:calc(var(--r) - 1px);
+  background:var(--s1);z-index:1;
+}
+.feat-card>*{position:relative;z-index:2;}
+.feat-card:hover::before{opacity:1;}
+.feat-card:hover{transform:translateY(-7px) scale(1.01);box-shadow:0 28px 65px rgba(0,0,0,0.5),var(--glow-g);}
+.feat-click-hint{
+  position:absolute;top:9px;right:10px;z-index:3;
+  font-family:var(--font-m);font-size:0.44rem;letter-spacing:0.1em;text-transform:uppercase;
+  color:var(--g);opacity:0;transition:opacity 0.2s;
+}
+.feat-card:hover .feat-click-hint{opacity:0.65;}
+.feat-icon-wrap{
+  width:38px;height:38px;border-radius:8px;
+  background:rgba(99,210,150,0.07);border:1px solid rgba(99,210,150,0.13);
+  display:flex;align-items:center;justify-content:center;font-size:1.1rem;
+  margin-bottom:12px;transition:all 0.35s;
+}
+.feat-card:hover .feat-icon-wrap{background:rgba(99,210,150,0.13);transform:scale(1.12) rotate(4deg);box-shadow:0 0 18px rgba(99,210,150,0.12);}
+.feat-title{font-size:0.82rem;font-weight:700;letter-spacing:0.02em;color:var(--text);margin-bottom:6px;}
+.feat-desc{font-size:0.7rem;color:var(--muted);line-height:1.65;}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.82);backdrop-filter:blur(14px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.25s;}
+.modal-overlay.open{opacity:1;pointer-events:all;}
+.modal{
+  background:var(--s1);border:1px solid var(--bdr2);border-radius:14px;
+  width:min(740px,90vw);max-height:84vh;overflow:hidden;
+  display:flex;flex-direction:column;
+  transform:scale(0.9) translateY(22px);
+  transition:transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
+  box-shadow:0 50px 120px rgba(0,0,0,0.85),var(--glow-g);
+}
+.modal-overlay.open .modal{transform:scale(1) translateY(0);}
+.modal-header{
+  padding:16px 24px;display:flex;align-items:flex-start;justify-content:space-between;
+  border-bottom:1px solid var(--bdr);background:var(--s2);flex-shrink:0;position:relative;
+}
+.modal-header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,var(--g),var(--amber),transparent);}
+.mh-left{display:flex;align-items:center;gap:11px;}
+.mh-icon{width:42px;height:42px;border-radius:8px;background:rgba(99,210,150,0.09);border:1px solid rgba(99,210,150,0.18);display:flex;align-items:center;justify-content:center;font-size:1.3rem;}
+.mh-title{font-size:0.96rem;font-weight:700;color:var(--text);margin-bottom:2px;}
+.mh-sub{font-family:var(--font-m);font-size:0.5rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--g);}
+.modal-close{background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;padding:4px;transition:color 0.2s;line-height:1;}
+.modal-close:hover{color:var(--text);}
+.modal-body{padding:20px 24px;overflow-y:auto;flex:1;}
+.modal-body::-webkit-scrollbar{width:2px;}
+.modal-detail{font-size:0.8rem;color:var(--muted);line-height:1.76;margin-bottom:18px;}
+.modal-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:18px;}
+.modal-tag{padding:3px 10px;background:rgba(99,210,150,0.06);border:1px solid rgba(99,210,150,0.14);border-radius:2px;font-family:var(--font-m);font-size:0.5rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--g);}
+.modal-img-zone{border-radius:8px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:rgba(5,6,9,0.5);}
+.modal-img-zone.has-img{border:1px solid var(--bdr2);}
+.modal-img-zone img{max-width:100%;max-height:280px;object-fit:contain;border-radius:6px;}
+
+/* ══════════════════════════════════════════
+   SLIDE 5 — PROBLEM
+══════════════════════════════════════════ */
+.prob-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;flex:1;margin-top:18px;}
+.prob-list{display:flex;flex-direction:column;gap:9px;}
+.prob-item{
+  display:flex;gap:12px;align-items:flex-start;padding:12px 14px;
+  background:var(--s1);border:1px solid var(--bdr);border-radius:8px;
+  transition:all 0.3s;opacity:0;transform:translateX(-14px);
+}
+.prob-item.visible{opacity:1;transform:translateX(0);}
+.prob-item:hover{border-color:rgba(224,114,114,0.2);background:rgba(224,114,114,0.025);}
+.prob-dot{width:7px;height:7px;border-radius:50%;background:var(--red);flex-shrink:0;margin-top:4px;box-shadow:0 0 8px rgba(224,114,114,0.4);}
+.prob-item span{font-size:0.76rem;color:var(--muted);line-height:1.65;}
+.cost-card{
+  padding:18px 20px;background:var(--s1);border:1px solid var(--bdr);border-radius:var(--r);
+  position:relative;overflow:hidden;
+}
+.cost-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--red),rgba(224,114,114,0.2));}
+.cost-title{font-family:var(--font-t);font-size:0.6rem;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:var(--red);margin-bottom:12px;}
+.cost-row{display:flex;align-items:flex-start;gap:12px;padding:9px 0;border-bottom:1px solid var(--bdr);}
+.cost-row:last-child{border-bottom:none;}
+.cost-num{font-family:var(--font-d);font-size:1.3rem;letter-spacing:0.04em;color:var(--red);white-space:nowrap;min-width:56px;}
+.cost-desc{font-size:0.7rem;color:var(--muted);line-height:1.55;}
+.live-counter-box{
+  margin-top:9px;padding:16px 18px;
+  background:linear-gradient(135deg,rgba(224,114,114,0.05),rgba(228,184,74,0.03));
+  border:1px solid rgba(224,114,114,0.18);border-radius:var(--r);
+  display:flex;align-items:center;gap:14px;position:relative;overflow:hidden;
+}
+.live-counter-box::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,var(--red),var(--amber),transparent);}
+.lc-icon{font-size:1.5rem;flex-shrink:0;}
+.lc-content{flex:1;}
+.lc-label{font-family:var(--font-t);font-size:0.54rem;font-weight:600;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:3px;}
+.lc-number{font-family:var(--font-d);font-size:2.4rem;letter-spacing:0.04em;color:var(--red);line-height:1;text-shadow:0 0 18px rgba(224,114,114,0.25);}
+.lc-sub{font-family:var(--font-m);font-size:0.48rem;letter-spacing:0.07em;color:var(--faint);margin-top:3px;}
+
+/* ══════════════════════════════════════════
+   SLIDE 6 — DEMO
+══════════════════════════════════════════ */
+.explorer-grid{display:grid;grid-template-columns:1fr 1.3fr 1fr;gap:10px;flex:1;margin-top:10px;min-height:0;}
+.ai-panel{background:var(--s1);border:1px solid var(--bdr);border-radius:var(--r);display:flex;flex-direction:column;overflow:hidden;}
+.ap-header{
+  display:flex;align-items:center;gap:7px;padding:9px 12px;
+  border-bottom:1px solid var(--bdr);background:var(--s2);flex-shrink:0;
+}
+.ap-title{font-family:var(--font-t);font-size:0.6rem;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--text);flex:1;}
+.ap-badge{font-family:var(--font-m);font-size:0.44rem;letter-spacing:0.14em;padding:2px 7px;border:1px solid var(--bdr2);border-radius:2px;color:var(--g);background:rgba(99,210,150,0.05);}
+.src-list{flex:1;padding:10px;overflow-y:auto;display:flex;flex-direction:column;gap:5px;}
+.src-section-lbl{font-family:var(--font-m);font-size:0.46rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--faint);margin-bottom:3px;}
+.src-chip{
+  display:flex;align-items:center;gap:7px;padding:8px 9px;
+  background:var(--s2);border:1px solid var(--bdr);border-radius:5px;
+  font-size:0.65rem;color:var(--muted);transition:all 0.2s;
+}
+.src-chip:hover{border-color:var(--bdr2);color:var(--text);background:rgba(99,210,150,0.03);}
+.src-ico{font-size:0.85rem;flex-shrink:0;}
+.qq-wrap{padding:9px 10px;border-top:1px solid var(--bdr);flex-shrink:0;}
+.qq-lbl{font-family:var(--font-m);font-size:0.46rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--faint);margin-bottom:5px;}
+.qq-item{display:flex;align-items:center;gap:5px;padding:6px 7px;border-radius:4px;cursor:pointer;transition:all 0.2s;font-size:0.65rem;color:var(--muted);}
+.qq-item:hover{background:rgba(99,210,150,0.06);color:var(--text);}
+.qq-arr{color:var(--g);font-size:0.76rem;flex-shrink:0;}
+.sim-panel{
+  background:var(--s1);border:1px solid rgba(228,184,74,0.16);border-radius:var(--r);
+  display:flex;flex-direction:column;overflow:hidden;position:relative;
+}
+.sim-panel::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--amber),transparent);}
+.sim-screen{flex:1;padding:10px;overflow-y:auto;font-size:0.7rem;color:var(--muted);line-height:1.7;}
+.sim-query-box{padding:7px 10px;background:rgba(228,184,74,0.05);border:1px solid rgba(228,184,74,0.13);border-radius:4px;font-family:var(--font-m);font-size:0.6rem;color:var(--amber);margin-bottom:7px;}
+.sim-query-lbl{font-size:0.44rem;letter-spacing:0.14em;text-transform:uppercase;color:rgba(228,184,74,0.45);margin-bottom:3px;}
+.sim-response-box{padding:9px 10px;background:rgba(99,210,150,0.03);border:1px solid rgba(99,210,150,0.1);border-radius:4px;font-size:0.68rem;color:var(--text);line-height:1.7;margin-bottom:7px;}
+.sim-response-lbl{font-family:var(--font-m);font-size:0.44rem;letter-spacing:0.14em;text-transform:uppercase;color:rgba(99,210,150,0.45);margin-bottom:3px;}
+.sim-cite{font-family:var(--font-m);font-size:0.56rem;color:var(--g);cursor:pointer;border-bottom:1px dotted rgba(99,210,150,0.5);}
+.sim-followup-box{padding:9px 10px;background:rgba(106,173,220,0.03);border:1px solid rgba(106,173,220,0.1);border-radius:4px;font-size:0.64rem;color:var(--muted);line-height:1.85;margin-bottom:7px;}
+.sim-followup-lbl{font-family:var(--font-m);font-size:0.44rem;letter-spacing:0.14em;text-transform:uppercase;color:rgba(106,173,220,0.45);margin-bottom:3px;}
+.sim-input-row{display:flex;padding:7px 9px;border-top:1px solid var(--bdr);background:var(--s2);flex-shrink:0;}
+.sim-in{flex:1;background:none;border:none;font-family:var(--font-m);font-size:0.64rem;color:var(--text);outline:none;padding:3px;}
+.sim-in::placeholder{color:var(--faint);}
+.sim-btn{padding:4px 12px;background:rgba(228,184,74,0.09);border:1px solid rgba(228,184,74,0.22);border-radius:3px;color:var(--amber);font-family:var(--font-t);font-size:0.58rem;font-weight:600;cursor:pointer;letter-spacing:0.09em;transition:all 0.2s;}
+.sim-btn:hover{background:rgba(228,184,74,0.16);box-shadow:0 0 10px rgba(228,184,74,0.12);}
+.chat-msgs{flex:1;padding:9px 10px;overflow-y:auto;display:flex;flex-direction:column;gap:7px;}
+.cmsg{display:flex;flex-direction:column;gap:2px;}
+.cmsg-lbl{font-family:var(--font-m);font-size:0.44rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--faint);padding:0 2px;}
+.cmsg.ai .cmsg-lbl{color:rgba(99,210,150,0.45);}
+.cmsg-bubble{font-size:0.68rem;line-height:1.65;padding:8px 10px;border-radius:5px;}
+.cmsg.user .cmsg-bubble{background:rgba(228,184,74,0.05);border:1px solid rgba(228,184,74,0.1);color:var(--text);}
+.cmsg.ai .cmsg-bubble{background:rgba(99,210,150,0.03);border:1px solid rgba(99,210,150,0.09);color:var(--muted);}
+.thinking{display:flex;align-items:center;gap:4px;padding:3px 0;}
+.tdot{width:4px;height:4px;border-radius:50%;background:var(--g);animation:bounce 1s infinite;}
+.tdot:nth-child(2){animation-delay:.15s;}.tdot:nth-child(3){animation-delay:.3s;}
+@keyframes bounce{0%,80%,100%{transform:translateY(0);}40%{transform:translateY(-4px);}}
+.chat-input-row{display:flex;padding:7px 9px;border-top:1px solid var(--bdr);background:var(--s2);flex-shrink:0;}
+.chat-in{flex:1;background:none;border:none;font-family:var(--font-m);font-size:0.64rem;color:var(--text);outline:none;padding:3px;}
+.chat-in::placeholder{color:var(--faint);}
+.chat-send{padding:4px 10px;background:rgba(99,210,150,0.09);border:1px solid rgba(99,210,150,0.2);border-radius:3px;color:var(--g);font-family:var(--font-t);font-size:0.58rem;font-weight:600;cursor:pointer;letter-spacing:0.07em;transition:all 0.2s;}
+.chat-send:hover{background:rgba(99,210,150,0.16);}
+.chat-send:disabled{opacity:0.4;cursor:not-allowed;}
+
+/* ══════════════════════════════════════════
+   SLIDE 7 — FINDINGS
+══════════════════════════════════════════ */
+.findings-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;flex:1;margin-top:18px;}
+.fc{
+  background:var(--s1);border:1px solid var(--bdr);border-radius:var(--r);
+  padding:22px 18px;transition:all 0.4s cubic-bezier(0.4,0,0.2,1);
+  position:relative;overflow:hidden;
+}
+/* Unique animated corner bracket on each card */
+.fc::before,.fc::after{
+  content:'';position:absolute;width:18px;height:18px;
+  transition:all 0.4s;
+}
+.fc::before{top:8px;left:8px;border-top:2px solid rgba(99,210,150,0.2);border-left:2px solid rgba(99,210,150,0.2);}
+.fc::after{bottom:8px;right:8px;border-bottom:2px solid rgba(228,184,74,0.2);border-right:2px solid rgba(228,184,74,0.2);}
+.fc:hover{border-color:var(--bdr2);transform:translateY(-5px);box-shadow:0 22px 55px rgba(0,0,0,0.4),var(--glow-g);}
+.fc:hover::before{width:24px;height:24px;border-color:rgba(99,210,150,0.5);}
+.fc:hover::after{width:24px;height:24px;border-color:rgba(228,184,74,0.5);}
+.fc-num{
+  font-family:var(--font-d);font-size:clamp(1.8rem,3vw,2.8rem);letter-spacing:0.04em;line-height:1;
+  background:linear-gradient(135deg,var(--g),var(--amber));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  margin-bottom:7px;
+}
+.fc-title{font-size:0.78rem;font-weight:700;letter-spacing:0.02em;color:var(--text);margin-bottom:5px;}
+.fc-desc{font-size:0.68rem;color:var(--muted);line-height:1.6;}
+
+/* ══════════════════════════════════════════
+   SLIDE 8 — ADOPTION
+══════════════════════════════════════════ */
+.compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px;}
+.cmp-col{background:var(--s1);border:1px solid var(--bdr);border-radius:var(--r);padding:16px 18px;position:relative;overflow:hidden;}
+.cmp-col.bad{border-top:2px solid var(--red);}
+.cmp-col.good{border-top:2px solid var(--g);}
+.cmp-head{font-family:var(--font-t);font-size:0.68rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:10px;padding-bottom:9px;border-bottom:1px solid var(--bdr);}
+.cmp-col.bad .cmp-head{color:var(--red);}
+.cmp-col.good .cmp-head{color:var(--g);}
+.cmp-item{
+  display:flex;align-items:flex-start;gap:9px;font-size:0.72rem;color:var(--muted);
+  padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.025);
+  opacity:0;transform:translateY(7px);transition:all 0.3s;
+}
+.cmp-item.visible{opacity:1;transform:translateY(0);}
+.ci{font-size:0.7rem;flex-shrink:0;margin-top:1px;}
+.why-row{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;}
+.wr-cell{
+  background:var(--s1);border:1px solid var(--bdr);border-radius:var(--r);
+  padding:12px 13px;transition:all 0.3s;position:relative;overflow:hidden;
+}
+.wr-cell:hover{border-color:var(--bdr2);}
+.wr-cell.hi{border-color:rgba(99,210,150,0.18);background:rgba(99,210,150,0.025);}
+.wr-cell::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(99,210,150,0.18),transparent);transform:scaleX(0);transition:transform 0.3s;}
+.wr-cell:hover::after{transform:scaleX(1);}
+.wr-lbl{font-family:var(--font-m);font-size:0.46rem;letter-spacing:0.16em;text-transform:uppercase;color:var(--g);margin-bottom:4px;}
+.wr-title{font-size:0.75rem;font-weight:700;color:var(--text);margin-bottom:4px;}
+.wr-detail{font-size:0.66rem;color:var(--muted);line-height:1.52;}
+/* Ticker */
+#aiTicker{
+  position:absolute;bottom:0;left:0;right:0;height:26px;
+  background:rgba(5,6,9,0.96);border-top:1px solid var(--bdr);
+  display:none;align-items:center;overflow:hidden;z-index:10;
+}
+#aiTicker.show{display:flex;}
+#aiTicker::before{
+  content:'INTEL';font-family:var(--font-m);font-size:0.44rem;letter-spacing:0.22em;color:var(--g);
+  padding:0 12px;flex-shrink:0;border-right:1px solid var(--bdr);
+}
+.ticker-inner{display:flex;animation:ticker 38s linear infinite;white-space:nowrap;}
+@keyframes ticker{from{transform:translateX(0);}to{transform:translateX(-50%);}}
+
+/* ══════════════════════════════════════════
+   SLIDE 9 — SUMMARY
+══════════════════════════════════════════ */
+.summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;flex:1;margin-top:18px;}
+.summary-block{background:var(--s1);border:1px solid var(--bdr);border-radius:var(--r);padding:20px;position:relative;overflow:hidden;}
+.sb-header{display:flex;align-items:center;gap:9px;margin-bottom:14px;}
+.sb-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.sb-title{font-family:var(--font-t);font-size:0.7rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--text);}
+.rec-list{display:flex;flex-direction:column;gap:9px;}
+.rec-item{
+  display:flex;align-items:flex-start;gap:12px;font-size:0.74rem;color:var(--muted);line-height:1.65;
+  padding:9px 11px;background:rgba(255,255,255,0.012);border-radius:5px;border:1px solid var(--bdr);transition:all 0.2s;
+}
+.rec-item:hover{border-color:var(--bdr2);background:rgba(99,210,150,0.022);}
+.rec-num{font-family:var(--font-m);font-size:0.6rem;letter-spacing:0.1em;color:var(--g);flex-shrink:0;min-width:26px;}
+.next-timeline{display:flex;flex-direction:column;}
+.nt-item{display:flex;align-items:flex-start;gap:14px;padding:10px 0;border-bottom:1px solid var(--bdr);}
+.nt-item:last-child{border-bottom:none;}
+.nt-line{display:flex;flex-direction:column;align-items:center;flex-shrink:0;width:24px;}
+.nt-dot{width:9px;height:9px;border-radius:50%;border:2px solid var(--g);background:rgba(99,210,150,0.14);box-shadow:0 0 8px rgba(99,210,150,0.18);}
+.nt-connector{width:1px;flex:1;min-height:16px;background:linear-gradient(to bottom,rgba(99,210,150,0.18),transparent);}
+.nt-week{font-family:var(--font-m);font-size:0.48rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--g);margin-bottom:2px;}
+.nt-action{font-size:0.76rem;font-weight:600;color:var(--text);margin-bottom:1px;}
+.nt-detail{font-size:0.66rem;color:var(--muted);}
+.cta-bar{
+  margin-top:12px;padding:14px 18px;
+  background:linear-gradient(135deg,rgba(99,210,150,0.06),rgba(228,184,74,0.04));
+  border:1px solid rgba(99,210,150,0.16);border-radius:9px;
+  display:flex;align-items:center;gap:16px;position:relative;overflow:hidden;
+}
+.cta-bar::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,var(--g),var(--amber),transparent);}
+
+/* ══════════════════════════════════════════
+   COMMAND PALETTE
+══════════════════════════════════════════ */
+.cmd-overlay{position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,0.78);backdrop-filter:blur(18px);display:flex;align-items:flex-start;justify-content:center;padding-top:14vh;opacity:0;pointer-events:none;transition:opacity 0.2s;}
+.cmd-overlay.open{opacity:1;pointer-events:all;}
+.cmd-box{width:min(500px,88vw);background:var(--s1);border:1px solid var(--bdr2);border-radius:12px;overflow:hidden;box-shadow:0 40px 110px rgba(0,0,0,0.85),var(--glow-g);transform:translateY(-10px);transition:transform 0.2s;}
+.cmd-overlay.open .cmd-box{transform:translateY(0);}
+.cmd-input-row{display:flex;align-items:center;gap:9px;padding:12px 16px;border-bottom:1px solid var(--bdr);}
+.cmd-icon{color:var(--g);font-size:0.85rem;flex-shrink:0;}
+.cmd-input{flex:1;background:none;border:none;font-family:var(--font-m);font-size:0.78rem;color:var(--text);outline:none;}
+.cmd-input::placeholder{color:var(--faint);}
+.cmd-hint{font-family:var(--font-m);font-size:0.48rem;letter-spacing:0.12em;color:var(--faint);flex-shrink:0;}
+.cmd-results{max-height:280px;overflow-y:auto;}
+.cmd-item{display:flex;align-items:center;gap:11px;padding:9px 16px;cursor:pointer;transition:background 0.15s;}
+.cmd-item:hover,.cmd-item.selected{background:rgba(99,210,150,0.06);}
+.cmd-item-icon{width:26px;height:26px;border-radius:5px;background:rgba(255,255,255,0.03);display:grid;place-items:center;font-size:0.75rem;flex-shrink:0;}
+.cmd-item-label{font-size:0.74rem;color:var(--text);}
+.cmd-item-sub{font-family:var(--font-m);font-size:0.48rem;color:var(--faint);}
+.cmd-footer{padding:7px 16px;border-top:1px solid var(--bdr);display:flex;gap:14px;}
+.cmd-foot-item{font-family:var(--font-m);font-size:0.46rem;letter-spacing:0.1em;color:var(--faint);display:flex;align-items:center;gap:4px;}
+.cmd-foot-key{background:rgba(255,255,255,0.05);padding:1px 5px;border-radius:2px;color:var(--muted);}
+</style>
+</head>
+<body>
+
+<!-- ATMOSPHERE -->
+<canvas id="bgCanvas"></canvas>
+<div class="bg-grid"></div>
+<div class="bg-diag"></div>
+<div class="bg-scan"></div>
+<div class="bg-vignette"></div>
+<div class="bg-noise"></div>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<div class="orb orb-3"></div>
+
+<!-- HUD CORNERS -->
+<div class="hud-corner tl"><svg viewBox="0 0 200 200" fill="none">
+  <path d="M12 188 L12 12 L188 12" stroke="rgba(99,210,150,0.1)" stroke-width="1"/>
+  <path d="M12 150 L12 12 L150 12" stroke="rgba(99,210,150,0.05)" stroke-width="1" stroke-dasharray="3 7"/>
+  <circle cx="12" cy="12" r="3" fill="rgba(99,210,150,0.35)"/>
+  <line x1="22" y1="12" x2="44" y2="12" stroke="rgba(99,210,150,0.5)" stroke-width="1"/>
+  <line x1="12" y1="22" x2="12" y2="44" stroke="rgba(99,210,150,0.5)" stroke-width="1"/>
+  <text x="18" y="28" font-family="JetBrains Mono" font-size="6" fill="rgba(99,210,150,0.2)" letter-spacing="2">SYS.ACTIVE</text>
+  <text x="18" y="38" font-family="JetBrains Mono" font-size="5" fill="rgba(99,210,150,0.12)" letter-spacing="1">V3.1.0</text>
+</svg></div>
+
+<div class="hud-corner tr"><svg viewBox="0 0 160 100" fill="none">
+  <path d="M148 8 L148 92 L12 92" stroke="rgba(228,184,74,0.08)" stroke-width="1"/>
+  <circle cx="148" cy="8" r="2.5" fill="rgba(228,184,74,0.3)"/>
+  <text x="60" y="14" font-family="JetBrains Mono" font-size="5.5" fill="rgba(228,184,74,0.18)" letter-spacing="1.5">CONFIDENTIAL</text>
+</svg></div>
+
+<div class="hud-corner bl"><svg viewBox="0 0 160 120" fill="none">
+  <path d="M12 8 L12 112 L148 112" stroke="rgba(106,173,220,0.07)" stroke-width="1"/>
+  <circle cx="12" cy="112" r="2.5" fill="rgba(106,173,220,0.25)"/>
+</svg></div>
+
+<div class="hud-corner br"><svg viewBox="0 0 200 160" fill="none">
+  <path d="M188 12 L188 148 L12 148" stroke="rgba(99,210,150,0.1)" stroke-width="1"/>
+  <path d="M188 50 L188 148 L50 148" stroke="rgba(99,210,150,0.05)" stroke-width="1" stroke-dasharray="3 7"/>
+  <circle cx="188" cy="148" r="3" fill="rgba(228,184,74,0.3)"/>
+  <line x1="168" y1="148" x2="146" y2="148" stroke="rgba(228,184,74,0.5)" stroke-width="1"/>
+  <text x="70" y="142" font-family="JetBrains Mono" font-size="6" fill="rgba(228,184,74,0.2)" letter-spacing="1.5">VERIFIED</text>
+</svg></div>
+
+<div class="shell">
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="tb-logo">
+      <div class="tb-logo-mark"><span>N</span></div>
+      <div>
+        <div class="tb-logo-text">NotebookLM</div>
+        <div class="tb-logo-sub">Intelligence Brief · Confidential</div>
+      </div>
+    </div>
+    <div class="tb-center" id="navDots"></div>
+    <div class="tb-right">
+      <div class="sys-item"><div class="sys-dot"></div>All Systems</div>
+      <div class="waveform">
+        <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+        <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+        <div class="wave-bar"></div>
+      </div>
+      <button class="script-toggle" id="scriptToggle" onclick="toggleScript()">📋 Script</button>
+      <div class="live-badge"><div class="lpulse"></div>LIVE</div>
+      <div class="slide-counter"><span id="sc">01</span>&nbsp;/&nbsp;<span id="total">09</span></div>
+    </div>
+  </div>
+  <div class="prog-bar"><div class="prog-fill" id="pf"></div></div>
+
+  <!-- MAIN ROW: SLIDES + SCRIPT PANEL -->
+  <div class="main-row">
+    <div class="slides-area" id="slidesArea">
+
+      <!-- AI TICKER (slide 8) -->
+      <div id="aiTicker">
+        <div class="ticker-inner" id="tickerInner"></div>
+      </div>
+
+      <!-- SLIDE DIR HINT -->
+      <div style="position:absolute;right:28px;bottom:10px;font-family:var(--font-m);font-size:0.44rem;letter-spacing:0.15em;color:var(--faint);text-transform:uppercase;display:flex;flex-direction:column;align-items:flex-end;gap:2px;z-index:5;pointer-events:none;">
+        <span>← → Navigate</span>
+        <span style="color:rgba(167,139,250,0.4);">⌘K Palette</span>
+      </div>
+
+      <!-- ═══ SLIDE 1: INTRODUCTION ═══ -->
+      <div class="slide active" data-slide="0">
+        <div class="hero-grid">
+          <div>
+            <div class="hero-eyebrow">
+              <div class="eyebrow-pill">Internal Briefing</div>
+              <div class="eyebrow-date" id="liveDate"></div>
+            </div>
+            <div class="hero-h">
+              <span class="ghost-text">The</span> <em>intelligence layer</em><br>
+              <span class="ghost-text">already inside</span><br>our Workspace.
+            </div>
+            <p class="hero-desc">NotebookLM is not a future investment — it's a free capability sitting inside Google Workspace right now that transforms our own documents into an AI that knows our business.</p>
+            <div class="hero-note">
+              <div class="hn-lbl">Today's Roadmap</div>
+              <div class="hn-txt">Industry context → before/after view of our team's day → the tool itself → live demo on real files → action plan.</div>
+            </div>
+          </div>
+          <div class="hero-right">
+            <div class="metric-card"><div class="mc-num">19%</div><div class="mc-lbl">Of working day lost</div><div class="mc-desc">Knowledge workers searching for information that already exists inside their own company — every single week.</div></div>
+            <div class="metric-card"><div class="mc-num">3 sec</div><div class="mc-lbl">With NotebookLM</div><div class="mc-desc">The same query that takes 5–10 minutes of manual searching returns a cited, verified answer in under 3 seconds.</div></div>
+            <div class="metric-card"><div class="mc-num">₱0</div><div class="mc-lbl">Additional cost</div><div class="mc-desc">Included in the Google Workspace licences already paid for. No new contracts, no IT project, no trial period.</div></div>
+            <div class="metric-card"><div class="mc-num">Day 1</div><div class="mc-lbl">New hire productive</div><div class="mc-desc">Self-onboards using the shared notebook. Zero senior-staff interruption. Full context from their first hour.</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ SLIDE 2: AI MOMENT ═══ -->
+      <div class="slide" data-slide="1">
+        <div style="flex-shrink:0;">
+          <div class="tag">The AI Moment<span class="tag-dot"></span></div>
+          <div class="h-display">We are living inside<br>the <em>window of opportunity.</em></div>
+          <p class="sub" style="margin-bottom:0;">The adoption curve is not waiting. Companies moving now build structural advantages that become very expensive for late movers to close.</p>
+        </div>
+        <div class="ai-moment-grid">
+          <div>
+            <div class="curve-wrap">
+              <div class="curve-label">TECHNOLOGY ADOPTION CURVE</div>
+              <canvas id="adoptionCanvas" height="200"></canvas>
+              <div class="curve-legend">
+                <div class="cl-item"><div class="cl-dot" style="background:#e07272;"></div>Innovators</div>
+                <div class="cl-item"><div class="cl-dot" style="background:#e4b84a;"></div>Early Adopters</div>
+                <div class="cl-item"><div class="cl-dot" style="background:#63d296;"></div>Early Majority ← We are here</div>
+                <div class="cl-item"><div class="cl-dot" style="background:rgba(255,255,255,0.2);"></div>Late Majority / Laggards</div>
+              </div>
+            </div>
+            <div class="window-banner" style="margin-top:9px;">
+              <div class="wb-pulse"></div>
+              <div class="wb-text">The <strong>Early Majority window</strong> is open right now. Companies in this phase gain structural advantages — lower cost, faster learning, first-mover trust. Late movers pay a premium and catch up, never lead.</div>
+            </div>
+          </div>
+          <div class="moment-stats" id="momentStats">
+            <div class="mstat"><div class="mstat-label">Global AI Adoption Rate</div><div class="mstat-num green" data-target="72">0</div><div class="mstat-desc">% of enterprises now actively using AI in at least one business function — up from 20% just 4 years ago</div></div>
+            <div class="mstat"><div class="mstat-label">Productivity Gain</div><div class="mstat-num green" data-target="40">0</div><div class="mstat-desc">% average productivity improvement reported by teams using AI-assisted knowledge retrieval</div></div>
+            <div class="mstat"><div class="mstat-label">Knowledge Worker Time Lost</div><div class="mstat-num amber" data-target="19">0</div><div class="mstat-desc">% of a typical workday spent searching for information that already exists inside the company</div></div>
+            <div class="mstat"><div class="mstat-label">Cost of Waiting</div><div class="mstat-num red">↑</div><div class="mstat-desc">Every month without AI tools is a month of compounding disadvantage vs. competitors already using them</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ SLIDE 3: DAY IN THE LIFE ═══ -->
+      <div class="slide" data-slide="2">
+        <div style="flex-shrink:0;margin-bottom:12px;">
+          <div class="tag">Before vs. After<span class="tag-dot"></span></div>
+          <div class="h-display" style="font-size:2rem;margin-bottom:4px;">The same team.<br><em>Two very different days.</em></div>
+          <p class="sub" style="margin-bottom:7px;font-size:0.8rem;">Toggle to see how the same workday looks — with and without NotebookLM running on our files.</p>
+        </div>
+        <div class="day-toggle-row">
+          <button class="day-toggle-btn active-bad" id="btnBefore" onclick="showDay('before')">✕ Without NotebookLM</button>
+          <button class="day-toggle-btn" id="btnAfter" onclick="showDay('after')">✓ With NotebookLM</button>
+        </div>
+        <div class="day-view active" id="dayBefore">
+          <div class="day-header-row">
+            <div class="dhr-lbl"></div><div class="dhr-lbl">9am</div><div class="dhr-lbl">10am</div><div class="dhr-lbl">11am</div>
+            <div class="dhr-lbl">12pm</div><div class="dhr-lbl">1pm</div><div class="dhr-lbl">2pm</div><div class="dhr-lbl">3pm</div><div class="dhr-lbl">4pm</div>
+          </div>
+          <div class="day-person">
+            <div class="dp-name">Listings</div>
+            <div class="dp-block work"><div class="dp-block-label">Listing review</div></div>
+            <div class="dp-block search"><div class="dp-block-label">🔍 Brand rules</div></div>
+            <div class="dp-block search"><div class="dp-block-label">🔍 Still searching</div></div>
+            <div class="dp-block meeting"><div class="dp-block-label">Meeting</div></div>
+            <div class="dp-block search"><div class="dp-block-label">🔍 SKU format</div></div>
+            <div class="dp-block work"><div class="dp-block-label">Actual work</div></div>
+            <div class="dp-block search"><div class="dp-block-label">🔍 Ops check</div></div>
+            <div class="dp-block idle"><div class="dp-block-label">Overrun</div></div>
+          </div>
+          <div class="day-person">
+            <div class="dp-name">Brand Ops</div>
+            <div class="dp-block search"><div class="dp-block-label">🔍 Finding doc</div></div>
+            <div class="dp-block work"><div class="dp-block-label">Updating sheet</div></div>
+            <div class="dp-block search"><div class="dp-block-label">🔍 Brand behavior?</div></div>
+            <div class="dp-block search"><div class="dp-block-label">🔍 Asking around</div></div>
+            <div class="dp-block meeting"><div class="dp-block-label">Meeting</div></div>
+            <div class="dp-block search"><div class="dp-block-label">🔍 Can't find ref</div></div>
+            <div class="dp-block work"><div class="dp-block-label">Actual work</div></div>
+            <div class="dp-block idle"><div class="dp-block-label">Behind</div></div>
+          </div>
+          <div class="day-person">
+            <div class="dp-name">New Hire</div>
+            <div class="dp-block idle"><div class="dp-block-label">Waiting for access</div></div>
+            <div class="dp-block idle"></div>
+            <div class="dp-block search span2"><div class="dp-block-label">🔍 Asking senior staff — interrupting their work</div></div>
+            <div class="dp-block idle"><div class="dp-block-label">Confused</div></div>
+            <div class="dp-block search span2"><div class="dp-block-label">🔍 Searching old files</div></div>
+            <div class="dp-block idle"><div class="dp-block-label">Unproductive</div></div>
+          </div>
+          <div class="day-summary-row">
+            <div class="dsumm"><div class="dsumm-num" style="color:var(--red);">~4 hrs</div><div class="dsumm-lbl">Lost per person searching</div></div>
+            <div class="dsumm"><div class="dsumm-num" style="color:var(--red);">3×</div><div class="dsumm-lbl">Team members interrupted</div></div>
+            <div class="dsumm"><div class="dsumm-num" style="color:var(--red);">High</div><div class="dsumm-lbl">Risk of inconsistent answers</div></div>
+            <div class="dsumm"><div class="dsumm-num" style="color:var(--red);">Slow</div><div class="dsumm-lbl">New hire time-to-productive</div></div>
+          </div>
+        </div>
+        <div class="day-view" id="dayAfter">
+          <div class="day-header-row">
+            <div class="dhr-lbl"></div><div class="dhr-lbl">9am</div><div class="dhr-lbl">10am</div><div class="dhr-lbl">11am</div>
+            <div class="dhr-lbl">12pm</div><div class="dhr-lbl">1pm</div><div class="dhr-lbl">2pm</div><div class="dhr-lbl">3pm</div><div class="dhr-lbl">4pm</div>
+          </div>
+          <div class="day-person">
+            <div class="dp-name">Listings</div>
+            <div class="dp-block work span2"><div class="dp-block-label">Listing review + updates</div></div>
+            <div class="dp-block nb"><div class="dp-block-label">⚡ NB query</div></div>
+            <div class="dp-block meeting"><div class="dp-block-label">Meeting</div></div>
+            <div class="dp-block work span3"><div class="dp-block-label">Deep work — focused output</div></div>
+            <div class="dp-block work"><div class="dp-block-label">Done early</div></div>
+          </div>
+          <div class="day-person">
+            <div class="dp-name">Brand Ops</div>
+            <div class="dp-block nb"><div class="dp-block-label">⚡ NB query</div></div>
+            <div class="dp-block work span3"><div class="dp-block-label">Brand compliance — uninterrupted</div></div>
+            <div class="dp-block meeting"><div class="dp-block-label">Meeting</div></div>
+            <div class="dp-block work span2"><div class="dp-block-label">Strategic work</div></div>
+            <div class="dp-block work"><div class="dp-block-label">Finished</div></div>
+          </div>
+          <div class="day-person">
+            <div class="dp-name">New Hire</div>
+            <div class="dp-block nb"><div class="dp-block-label">⚡ Self-onboards via NB</div></div>
+            <div class="dp-block work span3"><div class="dp-block-label">Contributing independently — zero interruptions to senior staff</div></div>
+            <div class="dp-block meeting"><div class="dp-block-label">Meeting</div></div>
+            <div class="dp-block work span3"><div class="dp-block-label">Productive output on Day 1</div></div>
+          </div>
+          <div class="day-summary-row">
+            <div class="dsumm"><div class="dsumm-num" style="color:var(--g);">~10 min</div><div class="dsumm-lbl">Avg time to find any answer</div></div>
+            <div class="dsumm"><div class="dsumm-num" style="color:var(--g);">0×</div><div class="dsumm-lbl">Senior staff interrupted</div></div>
+            <div class="dsumm"><div class="dsumm-num" style="color:var(--g);">Zero</div><div class="dsumm-lbl">Risk of inconsistent answers</div></div>
+            <div class="dsumm"><div class="dsumm-num" style="color:var(--g);">Day 1</div><div class="dsumm-lbl">New hire productive immediately</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ SLIDE 4: FEATURES ═══ -->
+      <div class="slide" data-slide="3">
+        <div style="flex-shrink:0;">
+          <div class="tag">System Capabilities<span class="tag-dot"></span></div>
+          <div class="h-display">NotebookLM turns your docs<br>into <em>AI that knows your business.</em></div>
+          <p class="sub">Connect your files. Ask plain English. Get verified answers with citations. Click any module to explore with screenshots.</p>
+        </div>
+        <div class="features-grid" id="featGrid"></div>
+      </div>
+
+      <!-- ═══ SLIDE 5: THE PROBLEM ═══ -->
+      <div class="slide" data-slide="4">
+        <div style="flex-shrink:0;">
+          <div class="tag">The Business Problem<span class="tag-dot"></span></div>
+          <div class="h-display">Your team has the answers.<br>They can't <em>find them fast enough.</em></div>
+          <p class="sub" style="margin-bottom:0;">Information buried across dozens of files. AI tools that make things up. Knowledge walking out when staff leave.</p>
+        </div>
+        <div class="prob-grid">
+          <div class="prob-list" id="probList">
+            <div class="prob-item"><div class="prob-dot"></div><span>General AI tools like ChatGPT fabricate confident-sounding answers — a direct liability for brand and operations decisions.</span></div>
+            <div class="prob-item"><div class="prob-dot"></div><span>Staff spend 3–5 hours per week manually searching Sheets, Docs, and Drive for information that already exists.</span></div>
+            <div class="prob-item"><div class="prob-dot"></div><span>When team members leave, institutional knowledge leaves with them. New staff onboarding is slow and error-prone.</span></div>
+            <div class="prob-item"><div class="prob-dot"></div><span>Inconsistent answers across the team lead to operational errors and brand standard violations.</span></div>
+          </div>
+          <div>
+            <div class="cost-card">
+              <div class="cost-title">Cost to Your Business</div>
+              <div class="cost-row"><div class="cost-num">3–5 hrs</div><div class="cost-desc">Wasted per person per week on information retrieval that could be instant</div></div>
+              <div class="cost-row"><div class="cost-num">↑ Errors</div><div class="cost-desc">When staff rely on memory or hallucinating AI for brand decisions</div></div>
+              <div class="cost-row"><div class="cost-num">Lost</div><div class="cost-desc">Institutional knowledge every time a valued team member exits</div></div>
+            </div>
+            <div class="live-counter-box" style="margin-top:9px;">
+              <div class="lc-icon">⏱</div>
+              <div class="lc-content">
+                <div class="lc-label">Hours Lost This Week — Across 5 Staff</div>
+                <div class="lc-number" id="liveCounter">0.0</div>
+                <div class="lc-sub">Counting in real time · resets Monday · based on 4hr/week average</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ SLIDE 6: DEMO ═══ -->
+      <div class="slide" data-slide="5" style="gap:9px;">
+        <div style="flex-shrink:0;">
+          <div class="tag">Interactive Demo<span class="tag-dot"></span></div>
+          <div class="h-display" style="font-size:1.85rem;margin-bottom:4px;">See it work — <em>live, on real data.</em></div>
+          <p class="sub" style="margin-bottom:0;font-size:0.78rem;">Sources left · NotebookLM simulation centre · Q&A right</p>
+        </div>
+        <div class="explorer-grid">
+          <div class="ai-panel">
+            <div class="ap-header"><div class="lpulse"></div><div class="ap-title">Connected Sources</div><div class="ap-badge">2 DOCS</div></div>
+            <div class="src-list">
+              <div class="src-section-lbl">Company Documents</div>
+              <div class="src-chip"><div class="src-ico">📊</div>Exclusive/Ops Brand Behavior — Instructions</div>
+              <div class="src-chip"><div class="src-ico">📄</div>Listings Team Reference Tables</div>
+            </div>
+            <div class="qq-wrap">
+              <div class="qq-lbl">Ask the Q&A Panel →</div>
+              <div class="qq-item" data-q="What makes NotebookLM different from ChatGPT?"><span class="qq-arr">›</span>NotebookLM vs ChatGPT?</div>
+              <div class="qq-item" data-q="Is our company data safe with NotebookLM?"><span class="qq-arr">›</span>Is our data safe?</div>
+              <div class="qq-item" data-q="What is the cost of NotebookLM for a business?"><span class="qq-arr">›</span>What does it cost?</div>
+              <div class="qq-item" data-q="How would our brand operations team use NotebookLM day-to-day?"><span class="qq-arr">›</span>How does our team use it?</div>
+              <div class="qq-item" data-q="How quickly can we get NotebookLM running for our team?"><span class="qq-arr">›</span>How fast can we start?</div>
+            </div>
+          </div>
+          <div class="sim-panel">
+            <div class="ap-header">
+              <div class="lpulse" style="background:var(--amber);"></div>
+              <div class="ap-title" style="color:var(--amber);">NotebookLM Simulation</div>
+              <div class="ap-badge" style="color:var(--amber);border-color:rgba(228,184,74,0.28);background:rgba(228,184,74,0.05);">REAL DATA</div>
+            </div>
+            <div style="padding:6px 9px;border-bottom:1px solid var(--bdr);display:flex;gap:5px;flex-shrink:0;background:var(--s2);">
+              <button onclick="runSim('asics')" style="padding:3px 9px;background:rgba(228,184,74,0.07);border:1px solid rgba(228,184,74,0.17);border-radius:3px;color:rgba(228,184,74,0.8);font-family:var(--font-m);font-size:0.5rem;letter-spacing:0.09em;cursor:pointer;transition:background 0.2s;" onmouseover="this.style.background='rgba(228,184,74,0.14)'" onmouseout="this.style.background='rgba(228,184,74,0.07)'">ASICS BRAND</button>
+              <button onclick="runSim('sku')" style="padding:3px 9px;background:rgba(228,184,74,0.07);border:1px solid rgba(228,184,74,0.17);border-radius:3px;color:rgba(228,184,74,0.8);font-family:var(--font-m);font-size:0.5rem;letter-spacing:0.09em;cursor:pointer;transition:background 0.2s;" onmouseover="this.style.background='rgba(228,184,74,0.14)'" onmouseout="this.style.background='rgba(228,184,74,0.07)'">SKU FORMAT</button>
+            </div>
+            <div class="sim-screen" id="simScreen">
+              <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:7px;opacity:0.3;">
+                <div style="font-size:1.6rem;">🔍</div>
+                <div style="font-family:var(--font-m);font-size:0.54rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);">Select a preset or type a query</div>
+              </div>
+            </div>
+            <div class="sim-input-row">
+              <input class="sim-in" id="simIn" placeholder="Type any query and press Enter…"/>
+              <button class="sim-btn" onclick="runSim()">Run →</button>
+            </div>
+          </div>
+          <div class="ai-panel">
+            <div class="ap-header"><div class="lpulse"></div><div class="ap-title">Q&A — Ask Anything</div><div class="ap-badge">LIVE</div></div>
+            <div class="chat-msgs" id="chatMsgs">
+              <div class="cmsg ai"><div class="cmsg-lbl">Assistant</div><div class="cmsg-bubble">Ask me anything about NotebookLM — how it works, privacy, cost, or how your team could use it. Or click a quick question on the left.</div></div>
+            </div>
+            <div class="chat-input-row">
+              <input class="chat-in" id="chatIn" placeholder="Ask about NotebookLM…"/>
+              <button class="chat-send" id="sendBtn" onclick="sendChat()">Ask →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ SLIDE 7: FINDINGS ═══ -->
+      <div class="slide" data-slide="6">
+        <div style="flex-shrink:0;">
+          <div class="tag">Pilot Results<span class="tag-dot"></span></div>
+          <div class="h-display">What I found after<br><em>one hands-on session.</em></div>
+          <p class="sub">ASICS brand behavior test: three internal documents, one plain English query, zero hallucinations.</p>
+        </div>
+        <div class="findings-grid">
+          <div class="fc"><div class="fc-num" data-count="100" data-suffix="%">0%</div><div class="fc-title">Accuracy Verified</div><div class="fc-desc">Every response matched source data exactly. No fabricated details, no external contamination.</div></div>
+          <div class="fc"><div class="fc-num">3 sec</div><div class="fc-title">Time to Answer</div><div class="fc-desc">From query to verified, cited response — vs. 5–10 minutes of manual searching across files.</div></div>
+          <div class="fc"><div class="fc-num">Zero</div><div class="fc-title">Hallucinations</div><div class="fc-desc">NotebookLM declined to answer what it couldn't source. No confident wrong answers.</div></div>
+          <div class="fc"><div class="fc-num" data-count="85" data-suffix="%">0%</div><div class="fc-title">Research Time Saved</div><div class="fc-desc">Projected reduction in time staff spend searching for operational information. Even half is meaningful.</div></div>
+          <div class="fc"><div class="fc-num">3+</div><div class="fc-title">AI-Suggested Follow-ups</div><div class="fc-desc">AI automatically surfaced related questions — accelerating knowledge discovery beyond the original query.</div></div>
+          <div class="fc"><div class="fc-num">Free</div><div class="fc-title">Cost to Start</div><div class="fc-desc">Included with existing Google Workspace. No new contracts, no licences, no IT project.</div></div>
+        </div>
+      </div>
+
+      <!-- ═══ SLIDE 8: ADOPTION ARGUMENT ═══ -->
+      <div class="slide" data-slide="7" style="position:relative;padding-bottom:38px;">
+        <div style="flex-shrink:0;margin-bottom:11px;">
+          <div class="tag">The Adoption Argument<span class="tag-dot"></span></div>
+          <div class="h-display" style="font-size:1.85rem;margin-bottom:4px;">Companies ignoring AI tools pay a <em>hidden tax</em> in lost time.</div>
+          <p class="sub" style="margin-bottom:0;font-size:0.78rem;">Why NotebookLM is the right first AI move — low risk, high trust, immediate value from tools we already use.</p>
+        </div>
+        <div class="compare-grid" id="compareGrid">
+          <div class="cmp-col bad">
+            <div class="cmp-head">✕ Standard AI (ChatGPT / Gemini)</div>
+            <div class="cmp-item"><span class="ci" style="color:var(--red)">✕</span>No source attribution — answers come from anywhere</div>
+            <div class="cmp-item"><span class="ci" style="color:var(--red)">✕</span>Fabricates confident-sounding wrong information</div>
+            <div class="cmp-item"><span class="ci" style="color:var(--red)">✕</span>Uses external training data — privacy exposure risk</div>
+            <div class="cmp-item"><span class="ci" style="color:var(--red)">✕</span>Team can't verify outputs — trust gap remains</div>
+            <div class="cmp-item"><span class="ci" style="color:var(--red)">✕</span>Requires prompt engineering knowledge to use well</div>
+          </div>
+          <div class="cmp-col good">
+            <div class="cmp-head">✓ NotebookLM</div>
+            <div class="cmp-item"><span class="ci" style="color:var(--g)">✓</span>Every answer cites the exact source row or paragraph</div>
+            <div class="cmp-item"><span class="ci" style="color:var(--g)">✓</span>Refuses to answer beyond provided sources — zero fabrication</div>
+            <div class="cmp-item"><span class="ci" style="color:var(--g)">✓</span>Data never used to train models — fully private</div>
+            <div class="cmp-item"><span class="ci" style="color:var(--g)">✓</span>One-click verification — complete team confidence</div>
+            <div class="cmp-item"><span class="ci" style="color:var(--g)">✓</span>Plain English questions — zero training required</div>
+          </div>
+        </div>
+        <div class="why-row" style="margin-top:9px;">
+          <div class="wr-cell hi"><div class="wr-lbl">Why Now</div><div class="wr-title" style="font-size:0.76rem;">The moment is right</div><div class="wr-detail">AI adoption is no longer optional. Companies starting now build compounding advantages. This is the lowest-risk entry point available.</div></div>
+          <div class="wr-cell"><div class="wr-lbl">Why This Tool</div><div class="wr-title" style="font-size:0.76rem;">Fits our stack already</div><div class="wr-detail">We already use Google Workspace. NotebookLM connects directly — zero migration, zero IT involvement, no new contracts.</div></div>
+          <div class="wr-cell"><div class="wr-lbl">Why It Works</div><div class="wr-title" style="font-size:0.76rem;">Proven on our own data</div><div class="wr-detail">100% accurate, cited results — tested on our actual brand behavior documents. Not a marketing claim.</div></div>
+          <div class="wr-cell"><div class="wr-lbl">Why Us</div><div class="wr-title" style="font-size:0.76rem;">We lead, team follows</div><div class="wr-detail">Leadership-led adoption is the fastest path to company-wide change. The groundwork is done. Now we move together.</div></div>
+        </div>
+      </div>
+
+      <!-- ═══ SLIDE 9: SUMMARY ═══ -->
+      <div class="slide" data-slide="8">
+        <div style="flex-shrink:0;">
+          <div class="tag">Summary & Recommendations<span class="tag-dot"></span></div>
+          <div class="h-display">Our verdict after<br><em>hands-on exploration.</em></div>
+          <p class="sub">What I found, what I believe, and what I recommend we do next.</p>
+        </div>
+        <div class="summary-grid">
+          <div class="summary-block">
+            <div class="sb-header"><div class="sb-dot" style="background:var(--g);box-shadow:0 0 9px rgba(99,210,150,0.4);"></div><div class="sb-title">Key Findings from the Pilot</div></div>
+            <div class="rec-list">
+              <div class="rec-item"><span class="rec-num">01</span>100% accurate, cited responses from our internal brand operations documents — zero hallucinations in every test.</div>
+              <div class="rec-item"><span class="rec-num">02</span>Answer time dropped from ~8 minutes of manual searching to under 3 seconds — with a clickable citation to the exact source.</div>
+              <div class="rec-item"><span class="rec-num">03</span>Any team member can ask plain English questions from day one — minimal learning curve, maximum adoption potential.</div>
+              <div class="rec-item"><span class="rec-num">04</span>AI automatically surfaced follow-up questions we hadn't thought to ask — accelerating knowledge discovery.</div>
+            </div>
+          </div>
+          <div class="summary-block">
+            <div class="sb-header"><div class="sb-dot" style="background:var(--amber);box-shadow:0 0 9px rgba(228,184,74,0.4);"></div><div class="sb-title">Our Recommendations</div></div>
+            <div class="next-timeline">
+              <div class="nt-item"><div class="nt-line"><div class="nt-dot"></div><div class="nt-connector"></div></div><div class="nt-content"><div class="nt-week">This Week</div><div class="nt-action">Create the first shared notebook</div><div class="nt-detail">Connect Brand Behavior + Listings Ops files. Share with the team. Under 30 minutes.</div></div></div>
+              <div class="nt-item"><div class="nt-line"><div class="nt-dot"></div><div class="nt-connector"></div></div><div class="nt-content"><div class="nt-week">Immediately After</div><div class="nt-action">Assign one champion</div><div class="nt-detail">Designate one team member to own setup, upkeep, and internal training.</div></div></div>
+              <div class="nt-item"><div class="nt-line"><div class="nt-dot"></div><div class="nt-connector"></div></div><div class="nt-content"><div class="nt-week">Weeks 1–4</div><div class="nt-action">Measure impact</div><div class="nt-detail">Track time saved weekly. The data will make the case for expansion automatically.</div></div></div>
+              <div class="nt-item"><div class="nt-line"><div class="nt-dot" style="border-color:var(--amber);background:rgba(228,184,74,0.1);"></div></div><div class="nt-content"><div class="nt-week">Month 2+</div><div class="nt-action">Expand iteratively</div><div class="nt-detail">Onboarding, SOPs, cross-team knowledge bases — the pattern repeats and compounds.</div></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="cta-bar">
+          <div style="font-size:1.7rem;flex-shrink:0;">🚀</div>
+          <div>
+            <div style="font-family:var(--font-t);font-size:0.68rem;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:var(--g);margin-bottom:3px;">The ask today</div>
+            <div style="font-size:0.8rem;color:var(--text);line-height:1.6;">Not a budget approval or a six-month project. <strong style="color:var(--g);">Permission to move forward</strong> with something we already have access to, that I've already tested, and that will save this team real time from day one.</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /slides-area -->
+
+    <!-- SCRIPT PANEL -->
+    <div class="script-panel" id="scriptPanel">
+      <div class="sp-header">
+        <div class="sp-title">Speaker Script</div>
+        <div class="sp-badge">CONFIDENTIAL</div>
+      </div>
+      <div class="sp-slide-name">
+        <div class="sp-slide-num" id="spSlideNum">01</div>
+        <span id="spSlideName">Introduction</span>
+      </div>
+      <div class="sp-body" id="spBody"></div>
+      <div class="sp-footer">
+        <div class="sp-timer-dot"></div>
+        <span>~18 min total · <span id="spTimer">2 min</span> this slide</span>
+      </div>
+    </div>
+
+  </div><!-- /main-row -->
+
+  <div class="bottombar">
+    <div class="bb-info" id="bbInfo">Slide 1 of 9 — Introduction</div>
+    <div class="bb-btns">
+      <button class="bb-btn" onclick="goTo(current-1)">← Prev</button>
+      <button class="bb-btn" onclick="goTo(current+1)">Next →</button>
+    </div>
+    <div class="bb-info" style="display:flex;align-items:center;gap:10px;">
+      <span>← → Navigate</span>
+      <span style="color:rgba(167,139,250,0.5);">⌘K Palette</span>
+      <span style="color:rgba(167,139,250,0.5);">S Toggle Script</span>
+    </div>
+  </div>
+</div>
+
+<!-- FEATURE MODAL -->
+<div class="modal-overlay" id="featModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="mh-left">
+        <div class="mh-icon" id="mIcon">📁</div>
+        <div><div class="mh-title" id="mTitle">Feature</div><div class="mh-sub">NotebookLM Capability</div></div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-tags" id="mTags"></div>
+      <p class="modal-detail" id="mDesc"></p>
+      <div class="modal-img-zone" id="mImgZone">
+        <img id="mImg" src="" alt="" style="display:none;">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- COMMAND PALETTE -->
+<div class="cmd-overlay" id="cmdOverlay" onclick="if(event.target===this)closeCmd()">
+  <div class="cmd-box">
+    <div class="cmd-input-row">
+      <span class="cmd-icon">⌘</span>
+      <input class="cmd-input" id="cmdInput" placeholder="Jump to slide, run action…" oninput="filterCmd()" onkeydown="handleCmdKey(event)">
+      <span class="cmd-hint">ESC to close</span>
+    </div>
+    <div class="cmd-results" id="cmdResults"></div>
+    <div class="cmd-footer">
+      <div class="cmd-foot-item"><span class="cmd-foot-key">↑↓</span>Navigate</div>
+      <div class="cmd-foot-item"><span class="cmd-foot-key">↵</span>Select</div>
+      <div class="cmd-foot-item"><span class="cmd-foot-key">ESC</span>Close</div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════
+   SPEAKER SCRIPT DATA
+══════════════════════════════════════════ */
+const SCRIPT=[
+  // Slide 1 — Introduction
+  {time:'2 min',sections:[
+    {label:'Opening',lines:[
+      {text:`"Thanks for the time. I want to show you something specific — not a general pitch about AI, but one tool that's sitting inside Google Workspace <em>right now</em> that I believe we're leaving on the table every single day.`,key:false},
+      {text:`It's called NotebookLM. It's <em>free</em> — already included in the Workspace licences we pay for. What I want to show you today is what happened when I actually tested it on our own files."`,key:true},
+    ]},
+    {label:'Roadmap',lines:[
+      {text:`"Quick roadmap: we start with what's happening in the industry right now, then I'll show you a real before-and-after of our team's day, the tool itself, a live demo on our actual documents, and what I think we should do next."`,key:false},
+    ]},
+  ]},
+  // Slide 2 — AI Moment
+  {time:'3 min',sections:[
+    {label:'Context',lines:[
+      {text:`"I want to start here, because context matters before we look at any specific tool."`,key:false},
+    ]},
+    {label:'S-Curve',cues:['→ Point to the S-curve on the left'],lines:[
+      {text:`"This is the technology adoption curve — it applies to every major shift: the internet, smartphones, cloud software, and now AI. The pattern is always the same: <em>early movers build structural advantages that become very expensive for late movers to close.</em>"`,key:false},
+      {text:`"The green zone — Early Majority — is where we are right now. This is the best time to move. Not the riskiest, not the most expensive. <strong>The window is open.</strong>"`,key:true},
+    ]},
+    {label:'Stats',cues:['→ Point to the stats on the right'],lines:[
+      {text:`"72% of enterprises are now actively using AI in at least one business function. That's not a prediction — that's today."`,key:false},
+      {text:`"Teams using AI-assisted knowledge retrieval are reporting 40% faster task completion. And here's the one that stings: knowledge workers spend 19% of their working day searching for information that already exists inside their own company."`,key:false},
+      {text:`"<em>That last number is ours too. That's the problem NotebookLM solves directly.</em>"`,key:true},
+    ]},
+  ]},
+  // Slide 3 — Day in the Life
+  {time:'3 min',sections:[
+    {label:'Setup',lines:[
+      {text:`"Before I show you the tool, I want to make this concrete. I put together a picture of what our team's day actually looks like — right now, and with NotebookLM running on our files."`,key:false},
+    ]},
+    {label:'Before Toggle',cues:['→ View starts on "Without NotebookLM"'],lines:[
+      {text:`"Look at how much red there is. Every one of those blocks is a person manually searching — for brand rules, for a SKU format, for an ops reference. They're not doing the wrong thing; this is just the only option available to them right now."`,key:false},
+      {text:`"And look at the new hire row — they're either waiting for help or interrupting a senior team member to get it."`,key:false},
+    ]},
+    {label:'After Toggle',cues:['→ Click "With NotebookLM"'],lines:[
+      {text:`"Same team. Same day. <em>The red disappears.</em> The new hire self-onboards using the notebook — no interruptions. The experienced staff go deep on actual work because answering a reference question now takes a 3-second query instead of 10 minutes of searching."`,key:true},
+      {text:`"<strong>The number I want you to hold onto:</strong> time-to-productive for a new hire goes from days to Day 1."`,key:true},
+    ]},
+  ]},
+  // Slide 4 — Features
+  {time:'3 min',sections:[
+    {label:'What it is',lines:[
+      {text:`"So what is NotebookLM, mechanically? You connect your documents — Sheets, Docs, PDFs, Drive files — and it becomes an AI that knows only what's in those files. Nothing else. No internet. No external data."`,key:false},
+      {text:`"You ask plain English questions. It answers with citations linking to the exact source."`,key:false},
+    ]},
+    {label:'Citations',cues:['→ Click the "Inline Citations" card'],lines:[
+      {text:`"This is the feature I keep coming back to. Every answer has a footnote. Click it, and you land on the exact row in the spreadsheet or paragraph in the doc. Any team member can verify any answer in one click — <em>no manual fact-checking, no trusting the AI blindly.</em>"`,key:true},
+    ]},
+    {label:'Privacy',cues:['→ Click "Fully Private" — especially if owner has concerns'],lines:[
+      {text:`"Your data never leaves your Workspace. Google has explicitly stated it is never used to train their models. The same security you already trust for Drive governs this."`,key:true},
+    ]},
+    {label:'Other features',cues:['→ Mention Team Collaboration and Studio if time allows'],lines:[
+      {text:`"And if we have time — Team Collaboration lets us share notebooks exactly like a Google Doc, with Welcome Notes that onboard new staff the moment they open it. Studio auto-generates audio overviews, FAQs, and briefing docs — all from our own files."`,key:false},
+    ]},
+  ]},
+  // Slide 5 — The Problem
+  {time:'2 min',sections:[
+    {label:'Naming the cost',lines:[
+      {text:`"Let me name what we're actually solving — because it has a real cost."`,key:false},
+      {text:`"Our team spends 3 to 5 hours per person per week searching for information that already exists. The general AI tools they might reach for instead — ChatGPT, Gemini — carry a different risk: <em>they fabricate confident-sounding answers.</em> For a brand decision, that's a liability."`,key:true},
+    ]},
+    {label:'Live counter',cues:['→ Point to the live counter in the bottom right'],lines:[
+      {text:`"That counter is running in real time. It's calculating hours lost across five staff members since Monday, based on the 4-hour weekly average. <strong>Watch it climb.</strong>"`,key:true},
+      {text:`"This is what not having a tool costs. Every week. Compounding."`,key:false},
+    ]},
+  ]},
+  // Slide 6 — Live Demo
+  {time:'3 min',sections:[
+    {label:'Setup',lines:[
+      {text:`"Now I want to show you this on our actual files. I've connected three documents: our Brand Behavior sheet, the Listings Ops Tasks, and the Reference Tables."`,key:false},
+    ]},
+    {label:'Demo',cues:['→ Click "ASICS Brand" preset'],lines:[
+      {text:`"That question — 'What is the brand behavior of ASICS?' — is one our team manually looks up regularly. <em>Three seconds. Cited. The footnote links straight to the source row.</em>"`,key:true},
+    ]},
+    {label:'Explore',cues:['→ Try a second preset or type a custom query','→ Point the owner to the Q&A panel — let them ask directly'],lines:[
+      {text:`"This isn't a rehearsed demo on fake data. <strong>These are our files. That's what I want you to see.</strong>"`,key:true},
+    ]},
+  ]},
+  // Slide 7 — Findings
+  {time:'1.5 min',sections:[
+    {label:'The numbers',lines:[
+      {text:`"Here's what the numbers looked like from that session."`,key:false},
+      {text:`"Every response matched the source exactly — no fabricated details, no external contamination. Answer time under 3 seconds. Zero hallucinations — when it couldn't find something, it said so rather than guessing."`,key:false},
+      {text:`"The 85% research time saving is a projection. <em>Even half that number is meaningful</em> — recovered hours, weekly, compounding across the whole team."`,key:true},
+    ]},
+  ]},
+  // Slide 8 — Adoption Argument
+  {time:'2 min',sections:[
+    {label:'Why NotebookLM',cues:['→ Point to the comparison table'],lines:[
+      {text:`"I want to address the 'why this tool, why now' question directly."`,key:false},
+      {text:`"The risk with general AI is structural — no source control, fabricated answers, no trust path. NotebookLM eliminates every one of those risks by design. It can only answer from what you give it. <em>One-click verification. Plain English. Zero training required.</em>"`,key:true},
+    ]},
+    {label:'Why us',cues:['→ Point to the four "why" cells below'],lines:[
+      {text:`"The reason I'm recommending this as our first AI move is that it requires nothing new — no migration, no IT project, no new contracts. We already use Workspace. <strong>This plugs directly into what we have.</strong>"`,key:true},
+    ]},
+    {label:'Ticker',cues:['→ Point to the ticker at the bottom — let them read it'],lines:[
+      {text:`"That's a live feed of the AI adoption reality we're operating inside. Companies moving now are building advantages that compound. The groundwork is done. I've already validated it. <em>The question is whether we move forward together.</em>"`,key:true},
+    ]},
+  ]},
+  // Slide 9 — Summary
+  {time:'1.5 min',sections:[
+    {label:'Findings',lines:[
+      {text:`"So here's where I land."`,key:false},
+      {text:`"The findings are clean: accurate answers, dramatically faster retrieval, minimal learning curve, AI-surfaced follow-ups accelerating discovery."`,key:false},
+    ]},
+    {label:'Recommendations',lines:[
+      {text:`"Start this week — create the first shared notebook from our brand operations files. Assign one champion — someone who owns it and helps the team get started. Measure for four weeks — track time saved, let the data speak. Then expand — onboarding, SOPs, cross-team knowledge bases."`,key:false},
+      {text:`"The ask today isn't a budget approval or a six-month project. <strong>It's permission to move forward with something we already have access to, that I've already tested, and that I believe will save this team real time from day one.</strong>"`,key:true},
+      {text:`"Happy to take any questions."`,key:false},
+    ]},
+    {label:'If they object…',lines:[
+      {text:`<em>Data safety?</em> → Covered on Slide 4: never used to train models, stays in Workspace.`,key:false},
+      {text:`<em>Still sounds risky?</em> → Ask them to watch the citation. Every answer verifiable in one click.`,key:false},
+      {text:`<em>Just ChatGPT?</em> → ChatGPT makes things up. NotebookLM refuses to answer what it can't source.`,key:false},
+      {text:`<em>How long to set up?</em> → Afternoon project. No IT. Under 30 minutes to connect files and share.`,key:false},
+    ]},
+  ]},
+];
+
+function renderScript(n){
+  const s=SCRIPT[n];if(!s)return;
+  document.getElementById('spSlideNum').textContent=String(n+1).padStart(2,'0');
+  document.getElementById('spSlideName').textContent=NAMES[n];
+  document.getElementById('spTimer').textContent=s.time;
+  const body=document.getElementById('spBody');
+  body.innerHTML=s.sections.map(sec=>{
+    const cues=sec.cues?sec.cues.map(c=>`<div class="sp-cue"><span class="sp-cue-arrow">→</span>${c}</div>`).join(''):'';
+    const lines=sec.lines.map(l=>`<div class="sp-line${l.key?' key':''}">${l.text}</div>`).join('');
+    return`<div class="sp-section">
+      <div class="sp-section-lbl">${sec.label}</div>
+      ${cues}${lines}
+    </div>`;
+  }).join('');
+  body.scrollTop=0;
+}
+
+let scriptOpen=false;
+function toggleScript(){
+  scriptOpen=!scriptOpen;
+  document.getElementById('scriptPanel').classList.toggle('open',scriptOpen);
+  document.getElementById('scriptToggle').classList.toggle('active',scriptOpen);
+}
+
+/* ══════════════════════════════════════════
+   PARTICLE CANVAS
+══════════════════════════════════════════ */
+(function(){
+  const canvas=document.getElementById('bgCanvas'),ctx=canvas.getContext('2d');
+  let W,H,particles=[],mouse={x:-999,y:-999};
+  function resize(){W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight;}
+  window.addEventListener('resize',resize);
+  window.addEventListener('mousemove',e=>{mouse.x=e.clientX;mouse.y=e.clientY;});
+  resize();
+  const COLORS=['rgba(99,210,150,','rgba(228,184,74,','rgba(106,173,220,'];
+  class P{
+    constructor(){this.reset();}
+    reset(){
+      this.x=Math.random()*W;this.y=Math.random()*H;
+      this.vx=(Math.random()-0.5)*0.22;this.vy=(Math.random()-0.5)*0.22;
+      this.r=Math.random()*1.1+0.3;this.life=Math.random()*Math.PI*2;
+      this.baseAlpha=Math.random()*0.3+0.06;
+      this.color=COLORS[Math.floor(Math.random()*COLORS.length)];
+    }
+    update(){
+      const dx=mouse.x-this.x,dy=mouse.y-this.y,d=Math.sqrt(dx*dx+dy*dy);
+      if(d<140){const f=0.04*(1-d/140);this.vx+=dx/d*f;this.vy+=dy/d*f;}
+      this.vx*=0.974;this.vy*=0.974;
+      this.x+=this.vx;this.y+=this.vy;
+      this.life+=0.025;
+      if(this.x<-10||this.x>W+10||this.y<-10||this.y>H+10)this.reset();
+    }
+    draw(){
+      const a=this.baseAlpha*(0.5+0.5*Math.sin(this.life));
+      ctx.beginPath();ctx.arc(this.x,this.y,this.r,0,Math.PI*2);
+      ctx.fillStyle=this.color+a+')';ctx.fill();
+    }
+  }
+  for(let i=0;i<110;i++)particles.push(new P());
+  function drawLines(){
+    for(let i=0;i<particles.length;i++){
+      for(let j=i+1;j<particles.length;j++){
+        const dx=particles[i].x-particles[j].x,dy=particles[i].y-particles[j].y,d=Math.sqrt(dx*dx+dy*dy);
+        if(d<100){ctx.beginPath();ctx.moveTo(particles[i].x,particles[i].y);ctx.lineTo(particles[j].x,particles[j].y);ctx.strokeStyle='rgba(99,210,150,'+(0.05*(1-d/100))+')';ctx.lineWidth=0.4;ctx.stroke();}
+      }
+    }
+  }
+  function animate(){
+    ctx.clearRect(0,0,W,H);
+    const g1=ctx.createRadialGradient(W*.72,H*.12,0,W*.72,H*.12,W*.5);g1.addColorStop(0,'rgba(99,210,150,0.038)');g1.addColorStop(1,'transparent');ctx.fillStyle=g1;ctx.fillRect(0,0,W,H);
+    const g2=ctx.createRadialGradient(W*.15,H*.88,0,W*.15,H*.88,W*.42);g2.addColorStop(0,'rgba(228,184,74,0.025)');g2.addColorStop(1,'transparent');ctx.fillStyle=g2;ctx.fillRect(0,0,W,H);
+    const gm=ctx.createRadialGradient(mouse.x,mouse.y,0,mouse.x,mouse.y,100);gm.addColorStop(0,'rgba(99,210,150,0.025)');gm.addColorStop(1,'transparent');ctx.fillStyle=gm;ctx.fillRect(0,0,W,H);
+    drawLines();particles.forEach(p=>{p.update();p.draw();});
+    requestAnimationFrame(animate);
+  }
+  animate();
+})();
+
+/* ══════════════════════════════════════════
+   LIVE DATE
+══════════════════════════════════════════ */
+document.getElementById('liveDate').textContent=new Date().toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'}).toUpperCase();
+
+/* ══════════════════════════════════════════
+   ADOPTION CURVE
+══════════════════════════════════════════ */
+function drawAdoptionCurve(){
+  const canvas=document.getElementById('adoptionCanvas');if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+  const W=canvas.offsetWidth||500,H=200;canvas.width=W;canvas.height=H;
+  const pts=[];
+  for(let i=0;i<=100;i++){const x=i/100,y=1/(1+Math.exp(-12*(x-0.5)));pts.push({x:W*0.05+x*W*0.9,y:H*0.85-y*H*0.75});}
+  const zones=[{s:0,e:5,c:'rgba(224,114,114,0.09)'},{s:5,e:18,c:'rgba(228,184,74,0.09)'},{s:18,e:50,c:'rgba(99,210,150,0.12)'},{s:50,e:84,c:'rgba(255,255,255,0.025)'},{s:84,e:100,c:'rgba(255,255,255,0.012)'}];
+  zones.forEach(z=>{ctx.fillStyle=z.c;ctx.fillRect(W*0.05+(z.s/100)*W*0.9,0,(z.e-z.s)/100*W*0.9,H*0.85);});
+  ctx.strokeStyle='rgba(255,255,255,0.03)';ctx.lineWidth=0.5;
+  for(let i=0;i<=4;i++){const y=(H*0.85)*i/4;ctx.beginPath();ctx.moveTo(W*0.05,y);ctx.lineTo(W*0.95,y);ctx.stroke();}
+  ctx.beginPath();ctx.moveTo(pts[0].x,H*0.85);pts.forEach(p=>ctx.lineTo(p.x,p.y));ctx.lineTo(pts[100].x,H*0.85);ctx.closePath();
+  const fg=ctx.createLinearGradient(0,0,W,0);fg.addColorStop(0,'rgba(224,114,114,0.03)');fg.addColorStop(0.35,'rgba(99,210,150,0.06)');fg.addColorStop(1,'rgba(255,255,255,0.01)');ctx.fillStyle=fg;ctx.fill();
+  ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);pts.forEach(p=>ctx.lineTo(p.x,p.y));
+  const lg=ctx.createLinearGradient(0,0,W,0);lg.addColorStop(0,'rgba(224,114,114,0.8)');lg.addColorStop(0.18,'rgba(228,184,74,0.9)');lg.addColorStop(0.5,'rgba(99,210,150,1)');lg.addColorStop(1,'rgba(255,255,255,0.2)');
+  ctx.strokeStyle=lg;ctx.lineWidth=2;ctx.stroke();
+  const mp=pts[35];
+  ctx.beginPath();ctx.arc(mp.x,mp.y,11,0,Math.PI*2);ctx.fillStyle='rgba(99,210,150,0.1)';ctx.fill();
+  ctx.beginPath();ctx.arc(mp.x,mp.y,6,0,Math.PI*2);const gw=ctx.createRadialGradient(mp.x,mp.y,0,mp.x,mp.y,6);gw.addColorStop(0,'rgba(99,210,150,1)');gw.addColorStop(1,'rgba(99,210,150,0.5)');ctx.fillStyle=gw;ctx.fill();
+  ctx.font='bold 8.5px JetBrains Mono,monospace';ctx.fillStyle='rgba(99,210,150,0.82)';ctx.fillText('← WE ARE HERE',mp.x+14,mp.y-3);
+  ctx.font='7.5px JetBrains Mono,monospace';ctx.fillStyle='rgba(236,234,228,0.18)';
+  [['INNOVATORS',0.025],['EARLY ADOPTERS',0.1],['EARLY MAJORITY',0.31],['LATE MAJORITY',0.57],['LAGGARDS',0.85]].forEach(([l,p])=>ctx.fillText(l,W*p,H*0.97));
+}
+
+/* ══════════════════════════════════════════
+   COUNTER + TICKER
+══════════════════════════════════════════ */
+function animateCounter(el,target,suffix,dur){
+  const start=Date.now();
+  (function step(){
+    const p=Math.min((Date.now()-start)/dur,1),e=1-Math.pow(1-p,3);
+    el.textContent=Math.round(e*target)+(suffix||'');
+    if(p<1)requestAnimationFrame(step);
+  })();
+}
+let ci=null;
+function startLiveCounter(){
+  const el=document.getElementById('liveCounter');if(!el)return;
+  const hps=20/(7*24*3600),now=new Date(),mon=new Date(now);
+  mon.setDate(now.getDate()-((now.getDay()+6)%7));mon.setHours(0,0,0,0);
+  let hrs=(now-mon)/1000*hps;
+  if(ci)clearInterval(ci);
+  ci=setInterval(()=>{hrs+=hps/10;el.textContent=hrs.toFixed(1);},100);
+}
+function stopLiveCounter(){if(ci)clearInterval(ci);ci=null;}
+
+const TICKER_ITEMS=[
+  '72% of enterprises now use AI in at least one business function',
+  'Knowledge workers spend 19% of their day searching for info that already exists inside their company',
+  'AI-assisted teams report 40% faster task completion rates',
+  'Companies adopting AI in 2025–26 are building advantages that compound monthly',
+  'The average cost of waiting: 3–5 staff hours lost per person per week',
+  'Early adopters build structural advantages late movers cannot buy back at any price',
+];
+const ti=document.getElementById('tickerInner');
+ti.innerHTML=[...TICKER_ITEMS,...TICKER_ITEMS].map(t=>`<div style="font-family:var(--font-m);font-size:0.54rem;letter-spacing:0.06em;color:rgba(236,234,228,0.3);padding:0 26px;display:flex;align-items:center;gap:9px;flex-shrink:0;"><span style="color:var(--g);font-size:0.42rem;letter-spacing:0.2em;text-transform:uppercase;">AI</span>${t}</div>`).join('');
+
+/* ══════════════════════════════════════════
+   NAVIGATION
+══════════════════════════════════════════ */
+const SLIDES=document.querySelectorAll('.slide');
+const TOTAL=SLIDES.length;
+const navCont=document.getElementById('navDots');
+let current=0;
+const NAMES=['Introduction','The AI Moment','Day in the Life','Features','The Problem','Live Demo','Pilot Findings','Adoption Argument','Summary'];
+document.getElementById('total').textContent=String(TOTAL).padStart(2,'0');
+SLIDES.forEach((_,i)=>{
+  const d=document.createElement('button');d.className='nd'+(i===0?' active':'');
+  d.setAttribute('data-label',NAMES[i]);d.onclick=()=>goTo(i);navCont.appendChild(d);
+});
+
+function onSlideEnter(n){
+  stopLiveCounter();
+  const tk=document.getElementById('aiTicker');tk.style.display='none';
+  if(n===0){
+    document.querySelectorAll('.metric-card').forEach((c,i)=>{c.classList.remove('visible');setTimeout(()=>c.classList.add('visible'),180+i*110);});
+  }
+  if(n===1){
+    setTimeout(drawAdoptionCurve,80);
+    document.querySelectorAll('#momentStats .mstat').forEach((s,i)=>{
+      s.classList.remove('visible');
+      setTimeout(()=>{
+        s.classList.add('visible');
+        const ne=s.querySelector('.mstat-num[data-target]');
+        if(ne)animateCounter(ne,parseInt(ne.getAttribute('data-target')),'',800);
+      },180+i*160);
+    });
+  }
+  if(n===4){
+    document.querySelectorAll('#probList .prob-item').forEach((it,i)=>{it.classList.remove('visible');setTimeout(()=>it.classList.add('visible'),120+i*110);});
+    startLiveCounter();
+  }
+  if(n===6){
+    setTimeout(()=>{
+      document.querySelectorAll('.fc-num[data-count]').forEach(el=>{animateCounter(el,parseInt(el.getAttribute('data-count')),el.getAttribute('data-suffix')||'',1000);});
+    },300);
+  }
+  if(n===7){
+    document.querySelectorAll('#compareGrid .cmp-item').forEach((it,i)=>{it.classList.remove('visible');setTimeout(()=>it.classList.add('visible'),80+i*70);});
+    tk.style.display='flex';
+  }
+  renderScript(n);
+}
+
+function goTo(n){
+  if(n<0||n>=TOTAL)return;
+  SLIDES[current].classList.remove('active');navCont.querySelectorAll('.nd')[current].classList.remove('active');
+  current=n;
+  SLIDES[current].classList.add('active');navCont.querySelectorAll('.nd')[current].classList.add('active');
+  document.getElementById('sc').textContent=String(current+1).padStart(2,'0');
+  document.getElementById('pf').style.width=((current+1)/TOTAL*100)+'%';
+  document.getElementById('bbInfo').textContent='Slide '+(current+1)+' of '+TOTAL+' — '+NAMES[current];
+  onSlideEnter(current);
+}
+
+document.addEventListener('keydown',e=>{
+  if(document.getElementById('featModal').classList.contains('open'))return;
+  if(document.getElementById('cmdOverlay').classList.contains('open'))return;
+  if(e.key==='ArrowRight'||e.key==='ArrowDown')goTo(current+1);
+  if(e.key==='ArrowLeft'||e.key==='ArrowUp')goTo(current-1);
+  if((e.metaKey||e.ctrlKey)&&e.key==='k'){e.preventDefault();openCmd();}
+  if(e.key==='s'&&!e.metaKey&&!e.ctrlKey&&document.activeElement.tagName!=='INPUT'){toggleScript();}
+});
+setTimeout(()=>onSlideEnter(0),100);
+
+/* ══════════════════════════════════════════
+   DAY TOGGLE
+══════════════════════════════════════════ */
+function showDay(mode){
+  ['dayBefore','dayAfter'].forEach(id=>document.getElementById(id).classList.remove('active'));
+  ['btnBefore','btnAfter'].forEach(id=>document.getElementById(id).classList.remove('active-bad','active-good'));
+  if(mode==='before'){document.getElementById('dayBefore').classList.add('active');document.getElementById('btnBefore').classList.add('active-bad');}
+  else{document.getElementById('dayAfter').classList.add('active');document.getElementById('btnAfter').classList.add('active-good');}
+}
+
+/* ══════════════════════════════════════════
+   FEATURES + MODAL
+══════════════════════════════════════════ */
+const FEATURES=[
+  {icon:'📁',title:'Connect Sources',image:'connect-sources.png',desc:'Link Google Sheets, Docs, PDFs, Drive files, website URLs, or paste text directly. Up to 50 sources per notebook — all analyzed together as one unified knowledge base.',detail:'NotebookLM accepts content from Google Drive (Docs, Sheets, Slides), uploaded PDFs, plain text, Markdown, website URLs, and copied/pasted content. All 50 sources are indexed and queried simultaneously.',tags:['Google Drive','PDF','Google Sheets','Web URLs','Up to 50 sources']},
+  {icon:'🤔',title:'Plain English Queries',image:'plain-english.png',desc:'Ask questions exactly as you\'d ask a colleague. No special syntax, no prompt engineering. "What is the brand behavior of ASICS?" returns a sourced, accurate answer instantly.',detail:'Unlike general AI tools that require careful prompt construction, NotebookLM understands natural, conversational questions. Ask follow-up questions in context, request comparisons, or specific data extractions — all in plain language.',tags:['Natural Language','Conversational','Follow-up Questions','Context-Aware']},
+  {icon:'🔗',title:'Inline Citations',image:'inline-citations.png',desc:'Every response includes superscript footnotes linking to the exact row, paragraph, or section. One click to verify — no manual fact-checking needed.',detail:'Each citation shows the exact passage supporting the answer. For spreadsheets, it links to specific rows and columns. For documents, it highlights the relevant paragraph. A complete audit trail from AI answer to raw source data.',tags:['Source Attribution','One-Click Verify','Audit Trail','Zero Trust Gap']},
+  {icon:'🔒',title:'Fully Private',image:'fully-private.png',desc:'Your documents are never used to train Google\'s AI models. Content stays within your Google account, subject to your existing Workspace security policies.',detail:'Google\'s data governance policy explicitly states that user content is not used to train or improve their AI models. Your proprietary brand data, operational procedures, and business intelligence remain exclusively within your Workspace.',tags:['Data Privacy','Not Used for Training','Workspace Security','Enterprise Safe']},
+  {icon:'👥',title:'Team Collaboration',image:'team-collaboration.png',desc:'Share notebooks with permission levels: Owner, Editor, Viewer. Add Welcome Notes to onboard new staff instantly with full context on what each notebook covers.',detail:'Notebooks can be shared like any Google document — with granular permissions. Welcome Notes function as custom instructions appearing when a new user first opens a notebook. Multiple users can query simultaneously.',tags:['Role-Based Access','Welcome Notes','Simultaneous Users','Easy Sharing']},
+  {icon:'🎙️',title:'Studio Features',image:'studio-features.png',desc:'Auto-generate Audio Overviews, Study Guides, FAQs, Timelines, and Briefing Documents directly from your source materials.',detail:'The Studio panel transforms any set of documents into multiple output formats. Audio Overview creates a realistic two-host AI podcast — ideal for async team briefings. Study Guides structure key themes. All outputs grounded exclusively in your source documents.',tags:['Audio Overview','Study Guides','FAQ Generation','Executive Briefings','Timelines']}
+];
+const fg=document.getElementById('featGrid');
+FEATURES.forEach((f,i)=>{
+  const el=document.createElement('div');el.className='feat-card';
+  el.innerHTML=`<div class="feat-click-hint">Explore ↗</div><div class="feat-icon-wrap">${f.icon}</div><div class="feat-title">${f.title}</div><div class="feat-desc">${f.desc}</div>`;
+  el.addEventListener('click',()=>openModal(i));fg.appendChild(el);
+});
+function openModal(i){
+  const f=FEATURES[i];
+  document.getElementById('mIcon').textContent=f.icon;
+  document.getElementById('mTitle').textContent=f.title;
+  document.getElementById('mDesc').textContent=f.detail;
+  document.getElementById('mTags').innerHTML=f.tags.map(t=>`<div class="modal-tag">${t}</div>`).join('');
+  const zone=document.getElementById('mImgZone'),img=document.getElementById('mImg');
+  if(f.image){img.src=f.image;img.style.display='block';zone.classList.add('has-img');}
+  else{img.src='';img.style.display='none';zone.classList.remove('has-img');}
+  document.getElementById('featModal').classList.add('open');
+}
+function closeModal(){document.getElementById('featModal').classList.remove('open');}
+document.getElementById('featModal').addEventListener('click',function(e){if(e.target===this)closeModal();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closeCmd();}});
+
+/* ══════════════════════════════════════════
+   AI ENGINE
+══════════════════════════════════════════ */
+const AI_KB=[
+  {keys:['different','chatgpt','gemini','vs','compare','versus','unlike','better'],answer:`NotebookLM is fundamentally different from ChatGPT or Gemini: it only answers from documents you provide. ChatGPT draws on its entire training data — which means it can fabricate confident-sounding answers. NotebookLM refuses to answer anything it can't source from your files. Every response includes a clickable citation to the exact row or paragraph. For business operations, that's the difference between a trusted tool and a liability.`},
+  {keys:['brand','ops','operations','team','use','day','daily','workflow','listings'],answer:`For a brand operations team, NotebookLM becomes a shared intelligence layer over your existing Google Sheets and Docs. Instead of manually searching the Exclusive/Ops Brand Behavior sheet, staff simply ask: "What is the brand behavior of ASICS?" and get a cited answer in seconds. It works for listing guidelines, SKU formats, priority tasks, and reference tables.`},
+  {keys:['safe','privacy','data','secure','security','private','train','training','gdpr'],answer:`NotebookLM is fully private by design. Google has explicitly stated that user content in NotebookLM is never used to train or improve their AI models. All data stays within your Google Workspace environment, subject to the same security policies you already trust for Drive and Docs.`},
+  {keys:['cost','price','free','pay','expensive','pricing','licence','license','subscription'],answer:`NotebookLM is currently free. If your company uses Google Workspace, you already have access at no additional cost. There's no separate contract, no per-seat licence fee, and no trial period. The only investment is the time to connect your documents and train your team.`},
+  {keys:['fast','quick','start','setup','begin','running','implement','long','soon','ready'],answer:`You can have NotebookLM running for your team within a single afternoon. Creating a notebook, connecting your Google Sheets and Docs, and sharing it takes less than 30 minutes. No IT setup, no software installation, no technical configuration.`},
+  {keys:['citation','cite','source','verify','proof','attribution','footnote','reference'],answer:`Citations are NotebookLM's most powerful feature. Every AI response includes superscript numbers — clicking them opens the exact excerpt from your source document. For spreadsheets, it highlights the specific row and column. Any team member can verify any answer in one click.`},
+  {keys:['audio','podcast','studio','overview','summary','guide','faq','briefing','generate'],answer:`NotebookLM's Studio panel automatically generates Audio Overviews (a realistic two-host AI podcast), Study Guides, auto-generated FAQs, and Briefing Docs — all grounded exclusively in your source documents.`},
+  {keys:['hallucination','hallucinate','wrong','inaccurate','mistake','fabricate','make up'],answer:`NotebookLM cannot hallucinate in the way general AI does. If the answer isn't in your documents, it tells you it can't find it. It won't invent an answer to seem helpful. In the ASICS pilot, every single response was verified as 100% accurate.`},
+  {keys:['onboard','onboarding','new staff','new employee','training','hire','welcome'],answer:`NotebookLM dramatically accelerates staff onboarding. New team members get access to a shared notebook containing all your SOPs and brand guidelines — then ask plain English questions to get up to speed without relying on senior staff.`},
+  {keys:['share','collaborate','permission','access','owner','editor','viewer','multiple'],answer:`Sharing in NotebookLM works exactly like sharing a Google Doc — with Owners, Editors, and Viewers. Multiple team members can query the same notebook simultaneously.`},
+  {keys:['recommendation','recommend','suggest','next step','action','should','do next'],answer:`The recommendation: start this week. Create one shared notebook from your existing Brand Behavior and Listings Operations files. Assign one champion. Run it for four weeks and track time saved. The data will make the case for expanding to other departments.`},
+  {keys:['asics','pilot','test','result','finding','outcome','proof','validated'],answer:`The ASICS brand operations test was the core validation. Three internal documents were connected. The query "What is the brand behavior of ASICS?" returned a 100% accurate, cited response in under 3 seconds — with a clickable footnote linking to the exact row in the source spreadsheet. Zero hallucinations.`}
+];
+function getAIAnswer(q){
+  const ql=q.toLowerCase();let best=null,bs=0;
+  for(const e of AI_KB){const s=e.keys.filter(k=>ql.includes(k)).length;if(s>bs){bs=s;best=e;}}
+  return(best&&bs>0)?best.answer:`NotebookLM is a Google AI tool that answers questions exclusively from documents you provide — eliminating hallucinations entirely. It integrates directly with Google Sheets, Docs, and Drive. What specific aspect would you like to know more about?`;
+}
+async function callAI(msg){
+  const btn=document.getElementById('sendBtn');btn.disabled=true;
+  const tid='t_'+Date.now();
+  addRaw(`<div class="cmsg ai" id="${tid}"><div class="cmsg-lbl">Assistant</div><div class="cmsg-bubble"><div class="thinking"><div class="tdot"></div><div class="tdot"></div><div class="tdot"></div></div></div></div>`);
+  await new Promise(r=>setTimeout(r,650+Math.random()*500));
+  document.getElementById(tid)?.remove();
+  addMsg(getAIAnswer(msg),'ai');btn.disabled=false;
+}
+function addMsg(text,type){
+  const w=document.getElementById('chatMsgs');
+  const d=document.createElement('div');d.className='cmsg '+type;
+  d.innerHTML=`<div class="cmsg-lbl">${type==='user'?'You':'Assistant'}</div><div class="cmsg-bubble">${text}</div>`;
+  w.appendChild(d);w.scrollTop=w.scrollHeight;
+}
+function addRaw(html){const w=document.getElementById('chatMsgs');w.insertAdjacentHTML('beforeend',html);w.scrollTop=w.scrollHeight;}
+
+/* ══════════════════════════════════════════
+   SIMULATION
+══════════════════════════════════════════ */
+const SIM={
+  asics:{query:'"What is the brand behavior of ASICS?"',
+    response:`<strong style="color:rgba(236,234,228,0.85)">ASICS (Operations):</strong> For the ASICS brand, operations primarily dictate specific cost gathering sequences depending on whether you are working on a listing data file (for bulk/prebook) or gathering costs for new item creations. When working on this brand, you should reference the "Asics Consolidated UPC List" and "Asics Consolidated UPC List 2" <span class="sim-cite">⁴·⁵</span>.<br><strong style>Here are the step-by-step instructions for each task:</strong><br>Cost Gathering Sequence for Listing Data Files (Bulk/PB):<br>
+<br>1. <strong>Closeout / Special Cost: </strong>Gather the Closeout cost, followed by the Special Cost, using the Special Pricing - AE Conso. Your lookup values should be the <strong>Style-Color</strong> followed by the <strong>Item Name. Do not apply any discounts to these costs.</strong>
+<br>2. <strong>Wholesale Cost:</strong> Gather the Wholesale Cost using the Website Scraper (Yara). Use <strong>Style Color</strong> first as your lookup value, followed by <strong>Style Number</strong>Once found, apply a <strong>15% discount</strong> to the Wholesale Cost (or refer to the current discount stated in Basecamp).
+<br>3. <strong>B2B Check:</strong> Use Style-Color then <strong>Style</strong> to look up the item in B2B. Apply the 15% discount (or current BC discount) to the Wholesale Cost here as well. <strong>Note:</strong> If an item is not found in B2B, you must exclude it.
+<br><strong style="font-size:15px">Cost Gathering Sequence for Items for Creation (Latest AE Instructions as of 5/14/25):</strong>
+<br>1. <strong>Closeout / Special Cost:</strong> Just like bulk orders, start by gathering the cost from Special Pricing - AE Conso (under Closeout Cost, then Special Cost). Use <strong>Style-Color</strong> then <strong>Item Name</strong> as lookup values, and <strong>do not apply a discount</strong>.
+<br>2. <strong>Wholesale Cost:</strong> Gather the cost from the Website Scraper (Yara) using <strong>Style-Color</strong> first, then <strong>Style Number</strong>. You must apply a 15% discount to all items, except for certain styles that have special pricing. For the styles below, follow the specific discount used from the Website Scraper instead of the flat 15%:
+<lu>
+<li>Venture (e.g., Venture, Gel-Venture, etc.)</li>
+<li>Contend</li>
+<li>Excite</li>
+<li>Gel-Pulse</li>
+<li>GT-1000</li>
+<li>Dynablast</li>
+<li>Versablast</li></lu>
+<br><strong>B2B Search:</strong> Finally, search B2B using the Style-Color, then the Style.
+Additionally, if you encounter any listing issues while working with ASICS, they should be logged in the dedicated Google Sheets tracker provided in the instructions.
+<br><br>All listing problems must be documented systematically to ensure proper monitoring and resolution.`,
+    followups:['What is the SKU format for Lemon Jelly listings?','How should Vibram mismatch sizes be handled?','What are listing priorities for exclusive vs. ops brands?']},
+  priority:{query:'"What are the listing task priorities for 2025?"',
+    response:`Listing operations priorities for 2025–26: (1) resolve active listing mismatches within 48 hours <span class="sim-cite">²</span>, (2) ensure all new SKUs follow the standardised format before publishing <span class="sim-cite">³</span>, and (3) complete weekly inventory reconciliation every Monday.`,
+    followups:['What is the deadline for Q1 listing updates?','Who owns the mismatch resolution process?','Which brands have priority listing flags?']},
+  sku:{query:'"What is the SKU format of ASICs?"',
+    response:`Based on the <strong>Listings Team Reference Tables</strong>, the SKU format for <strong>ASICS</strong> is as follows</strong> <span class="sim-cite">¹</span>. 
+<<li><strong>SKU Initial:</strong> AS-</li>
+<li><strong>Format Structure:</strong> SKU Initial + Style Number + - + Color Code + - + Size</li>
+<li><strong>Sample SKUs:</strong></li>
+<lu><li>AS-1011A041-001-10H</li>
+<li>AS-2011A018-021-2XL</li>
+</lu>
+<br>
+<strong>Important Note:</strong> In the size section of the SKU, 10H denotes a size 10.5 (10 Half).`,
+    followups:['What is the SKU format for 5.11 Tactical products?','How do you handle width initials in Thorogood SKUs?','What does the 10H indicator mean in ASICS sizing?']}
+};
+let simRunning=false;
+async function runSim(key){
+  if(simRunning)return;simRunning=true;
+  const screen=document.getElementById('simScreen'),btn=document.querySelector('.sim-btn');
+  btn.disabled=true;
+  let p;if(key&&SIM[key]){p=SIM[key];}else{
+    const v=document.getElementById('simIn').value.trim().toLowerCase();document.getElementById('simIn').value='';
+    p=v.includes('priority')||v.includes('task')?SIM.priority:v.includes('sku')||v.includes('format')?SIM.sku:SIM.asics;
+  }
+  screen.innerHTML=`<div class="sim-query-box"><div class="sim-query-lbl">Query sent to NotebookLM</div>${p.query}</div><div class="thinking" style="padding:8px 0;"><div class="tdot"></div><div class="tdot"></div><div class="tdot"></div><span style="font-family:var(--font-m);font-size:0.52rem;color:var(--faint);margin-left:8px;letter-spacing:0.1em;">SEARCHING SOURCES…</span></div>`;
+  await new Promise(r=>setTimeout(r,1100));
+  screen.innerHTML=`<div class="sim-query-box"><div class="sim-query-lbl">Query</div>${p.query}</div><div class="sim-response-box"><div class="sim-response-lbl">NotebookLM Response</div>${p.response}</div><div class="sim-followup-box"><div class="sim-followup-lbl">AI-Suggested Follow-ups</div>${p.followups.map(f=>`› ${f}`).join('<br>')}</div><div style="padding:8px 10px;background:rgba(99,210,150,0.03);border:1px solid rgba(99,210,150,0.09);border-radius:4px;margin-top:2px;"><div style="font-family:var(--font-m);font-size:0.44rem;color:var(--g);margin-bottom:2px;letter-spacing:0.14em;text-transform:uppercase;">Verification</div><div style="font-size:0.66rem;color:var(--muted);line-height:1.65;">✓ Sourced from your 3 connected docs only<br>✓ 0% hallucination — no external data used<br>✓ Citations link to exact source row</div></div>`;
+  btn.disabled=false;simRunning=false;
+}
+document.getElementById('simIn').addEventListener('keypress',e=>{if(e.key==='Enter')runSim();});
+function sendChat(){const i=document.getElementById('chatIn'),m=i.value.trim();if(!m)return;addMsg(m,'user');i.value='';callAI(m);}
+document.getElementById('chatIn').addEventListener('keypress',e=>{if(e.key==='Enter')sendChat();});
+document.querySelectorAll('.qq-item').forEach(el=>{
+  el.addEventListener('click',()=>{const q=el.getAttribute('data-q');addMsg(q,'user');callAI(q);if(current!==5)goTo(5);});
+});
+
+/* ══════════════════════════════════════════
+   COMMAND PALETTE
+══════════════════════════════════════════ */
+const CMD_ITEMS=[
+  ...NAMES.map((name,i)=>({icon:'→',label:'Go to: '+name,sub:'Slide '+(i+1),action:()=>goTo(i)})),
+  {icon:'📋',label:'Toggle Speaker Script',sub:'Show/hide script panel',action:toggleScript},
+  {icon:'▶',label:'Run ASICS Demo',sub:'Slide 6 simulation',action:()=>{goTo(5);setTimeout(()=>runSim('asics'),400);}},
+  {icon:'▶',label:'Run SKU Format Demo',sub:'Slide 6 simulation',action:()=>{goTo(5);setTimeout(()=>runSim('sku'),400);}},
+  {icon:'🔁',label:'Toggle Before View',sub:'Slide 3',action:()=>{goTo(2);setTimeout(()=>showDay('before'),300);}},
+  {icon:'🔁',label:'Toggle After View',sub:'Slide 3',action:()=>{goTo(2);setTimeout(()=>showDay('after'),300);}},
+];
+let cmdSel=0,filteredCMD=CMD_ITEMS;
+function openCmd(){document.getElementById('cmdOverlay').classList.add('open');document.getElementById('cmdInput').value='';filteredCMD=CMD_ITEMS;cmdSel=0;renderCmd();setTimeout(()=>document.getElementById('cmdInput').focus(),50);}
+function closeCmd(){document.getElementById('cmdOverlay').classList.remove('open');}
+function filterCmd(){const q=document.getElementById('cmdInput').value.toLowerCase();filteredCMD=CMD_ITEMS.filter(it=>it.label.toLowerCase().includes(q)||it.sub.toLowerCase().includes(q));cmdSel=0;renderCmd();}
+function renderCmd(){
+  document.getElementById('cmdResults').innerHTML=filteredCMD.slice(0,9).map((it,i)=>`
+    <div class="cmd-item${i===cmdSel?' selected':''}" onclick="execCmd(${i})">
+      <div class="cmd-item-icon">${it.icon}</div>
+      <div><div class="cmd-item-label">${it.label}</div><div class="cmd-item-sub">${it.sub}</div></div>
+    </div>`).join('');
+}
+function execCmd(i){if(filteredCMD[i]){filteredCMD[i].action();closeCmd();}}
+function handleCmdKey(e){
+  if(e.key==='ArrowDown'){e.preventDefault();cmdSel=Math.min(cmdSel+1,Math.min(filteredCMD.length,9)-1);renderCmd();}
+  if(e.key==='ArrowUp'){e.preventDefault();cmdSel=Math.max(cmdSel-1,0);renderCmd();}
+  if(e.key==='Enter'){e.preventDefault();execCmd(cmdSel);}
+}
+</script>
+</body>
+</html>
