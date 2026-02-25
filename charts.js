@@ -61,4 +61,3 @@ const TICKER_ITEMS=[
 ];
 const ti=document.getElementById('tickerInner');
 ti.innerHTML=[...TICKER_ITEMS,...TICKER_ITEMS].map(t=>`<div style="font-family:var(--font-m);font-size:0.54rem;letter-spacing:0.06em;color:rgba(236,234,228,0.3);padding:0 26px;display:flex;align-items:center;gap:9px;flex-shrink:0;"><span style="color:var(--g);font-size:0.42rem;letter-spacing:0.2em;text-transform:uppercase;">AI</span>${t}</div>`).join('');
-
