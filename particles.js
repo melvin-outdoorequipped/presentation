@@ -15,7 +15,7 @@
       this.x=Math.random()*W;this.y=Math.random()*H;
       this.vx=(Math.random()-0.5)*0.22;this.vy=(Math.random()-0.5)*0.22;
       this.r=Math.random()*1.1+0.3;this.life=Math.random()*Math.PI*2;
-      this.baseAlpha=Math.random()*0.3+0.06;
+      this.baseAlpha=Math.random()*0.4+0.15;
       this.color=COLORS[Math.floor(Math.random()*COLORS.length)];
     }
     update(){
@@ -37,18 +37,17 @@
     for(let i=0;i<particles.length;i++){
       for(let j=i+1;j<particles.length;j++){
         const dx=particles[i].x-particles[j].x,dy=particles[i].y-particles[j].y,d=Math.sqrt(dx*dx+dy*dy);
-        if(d<100){ctx.beginPath();ctx.moveTo(particles[i].x,particles[i].y);ctx.lineTo(particles[j].x,particles[j].y);ctx.strokeStyle='rgba(99,210,150,'+(0.05*(1-d/100))+')';ctx.lineWidth=0.4;ctx.stroke();}
+        if(d<100){ctx.beginPath();ctx.moveTo(particles[i].x,particles[i].y);ctx.lineTo(particles[j].x,particles[j].y);ctx.strokeStyle='rgba(99,210,150,'+(0.12*(1-d/100))+')';ctx.lineWidth=0.5;ctx.stroke();}
       }
     }
   }
   function animate(){
     ctx.clearRect(0,0,W,H);
-    const g1=ctx.createRadialGradient(W*.72,H*.12,0,W*.72,H*.12,W*.5);g1.addColorStop(0,'rgba(99,210,150,0.038)');g1.addColorStop(1,'transparent');ctx.fillStyle=g1;ctx.fillRect(0,0,W,H);
-    const g2=ctx.createRadialGradient(W*.15,H*.88,0,W*.15,H*.88,W*.42);g2.addColorStop(0,'rgba(228,184,74,0.025)');g2.addColorStop(1,'transparent');ctx.fillStyle=g2;ctx.fillRect(0,0,W,H);
-    const gm=ctx.createRadialGradient(mouse.x,mouse.y,0,mouse.x,mouse.y,100);gm.addColorStop(0,'rgba(99,210,150,0.025)');gm.addColorStop(1,'transparent');ctx.fillStyle=gm;ctx.fillRect(0,0,W,H);
+    const g1=ctx.createRadialGradient(W*.72,H*.12,0,W*.72,H*.12,W*.5);g1.addColorStop(0,'rgba(99,210,150,0.08)');g1.addColorStop(1,'transparent');ctx.fillStyle=g1;ctx.fillRect(0,0,W,H);
+    const g2=ctx.createRadialGradient(W*.15,H*.88,0,W*.15,H*.88,W*.42);g2.addColorStop(0,'rgba(228,184,74,0.06)');g2.addColorStop(1,'transparent');ctx.fillStyle=g2;ctx.fillRect(0,0,W,H);
+    const gm=ctx.createRadialGradient(mouse.x,mouse.y,0,mouse.x,mouse.y,100);gm.addColorStop(0,'rgba(99,210,150,0.08)');gm.addColorStop(1,'transparent');ctx.fillStyle=gm;ctx.fillRect(0,0,W,H);
     drawLines();particles.forEach(p=>{p.update();p.draw();});
     requestAnimationFrame(animate);
   }
   animate();
 })();
-
