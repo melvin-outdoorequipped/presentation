@@ -324,13 +324,6 @@ const SLIDES_HTML = [
             </div>
           </div>
         </div>
-        <div class="cta-bar">
-          <div style="font-size:1.7rem;flex-shrink:0;">🚀</div>
-          <div>
-            <div style="font-family:var(--font-t);font-size:0.68rem;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:var(--g);margin-bottom:3px;">The ask today</div>
-            <div style="font-size:0.8rem;color:var(--text);line-height:1.6;">Not a budget approval or a six-month project. <strong style="color:var(--g);">Permission to move forward</strong> with something we already have access to, that I've already tested, and that will save this team real time from day one.</div>
-          </div>
-        </div>
       </div>
 
     `,
